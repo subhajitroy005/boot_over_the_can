@@ -1,7 +1,12 @@
+/*
+* Main Application
+* Read the hex file and have a flow control with the programmer. 
+*/
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #include "./utility/utility_support.h"
+
 /* Variable Declaraation ___________________________________________________________*/
 uint8_t temp[100];
 uint32_t i = 0;
