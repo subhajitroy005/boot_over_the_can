@@ -1,12 +1,3 @@
-CMakeLists.txt.user
-CMakeCache.txt
-CMakeFiles
-CMakeScripts
-Testing
-cmake_install.cmake
-install_manifest.txt
-compile_commands.json
-CTestTestfile.cmake
 _deps
 /HOST_Programmer/HOST_Programmer_firmware.X/build/
 /HOST_Programmer/HOST_Programmer_firmware.X/dist/
