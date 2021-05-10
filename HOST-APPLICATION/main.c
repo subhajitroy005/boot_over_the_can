@@ -1,3 +1,7 @@
+/*
+* Main Application
+* Read the hex file and have a flow control with the programmer. 
+*/
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
