@@ -40,7 +40,23 @@ void each_hex_line_operation(char * data);
 int main()
 {
         FILE* hex_file_ptr;
-        get_serial_string(2);
+        char *portname = "/dev/ttyUSB0";
+        config_serial_port(portname);
+
+        write_serial_string("Hell");
+
+        int len = 0;
+        uint8_t buffer[MAX_INCOMMING_STRING_LENGTH];
+        
+        memset(buffer , 0 , sizeof(buffer));
+        //read_serial_string(buffer , &len);
+        while(len<=0){
+                read_serial_string(buffer , &len);
+                //usleep ((7 + 25) * 100);
+        }
+        printf("String: %d   ---  %s\n\r",len , buffer);
+
+
         hex_file_ptr = fopen("./abc.hex" ,"r");
         if (hex_file_ptr == NULL){ 
                 printf( "FILE OPEN FAIL\n\r"); 
