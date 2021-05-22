@@ -2,10 +2,11 @@
 * Main Application
 * Read the hex file and have a flow control with the programmer. 
 */
-#include <stdio.h>
-#include <string.h>
-#include <stdint.h>
-#include "./utility/utility_support.h"
+
+#include <utility_support.h>
+#include <serial_drv_linux.h>
+#include <config.h>
+#include <data_type_support.h>
 
 /* Variable Declaraation ___________________________________________________________*/
 uint8_t temp[100];
@@ -39,7 +40,7 @@ void each_hex_line_operation(char * data);
 int main()
 {
         FILE* hex_file_ptr;
-
+        get_serial_string(2);
         hex_file_ptr = fopen("./abc.hex" ,"r");
         if (hex_file_ptr == NULL){ 
                 printf( "FILE OPEN FAIL\n\r"); 
