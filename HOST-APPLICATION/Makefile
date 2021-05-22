@@ -1,7 +1,14 @@
-CC = gcc
-CCFLAGS =
 
-all:
-	$(CC) -o ./debug_files/x86_linux_deb/a.out main.c
-clean:
-	rm -f ./debug_files/x86_linux_deb/a.out
+
+build: .build-impl
+	@echo "Build Successful!"
+
+
+clean: .clean-impl
+	@echo "Clean Done!"
+
+# include project build rules makefile
+include build_support/Makefile-impl.mk
+
+# include project make variables
+include build_support/Makefile-var.mk

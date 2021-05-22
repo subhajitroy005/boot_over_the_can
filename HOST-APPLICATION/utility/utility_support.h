@@ -9,6 +9,9 @@
 #ifndef UTILITY_SUPPORT_H_
 #define UTILITY_SUPPORT_H_
 
+#include <data_type_support.h>
+
+
 
 int hexadecimalToDecimal(char hexVal[])
 {
