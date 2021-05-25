@@ -4,9 +4,11 @@
 */
 
 #include <utility_support.h>
+#include <file_handling_support.h>
 #include <serial_drv_linux.h>
 #include <config.h>
 #include <data_type_support.h>
+#include <queue.h>
 
 /* Variable Declaraation ___________________________________________________________*/
 uint8_t temp[100];
@@ -15,6 +17,7 @@ uint16_t data;
 char ch;
 char line_buffer[200] = {};
 uint32_t line_buff_index = 0;
+
 //--------------- Individual data filed buffer _
 #define REC_LENGTH_START_INDEX 0
 #define REC_LENGTH_LENGTH 2
@@ -28,8 +31,11 @@ char addr[4] = {};
 #define REC_TYPE_LENGTH 2
 char rec_type[2] = {};
 
-
+#define DATA_START_INDEX 8
+#define DATA_LENGTH 2
 char data_filed[100] = {};
+
+
 char check_sum[2] = {};
 
 
@@ -39,14 +45,15 @@ void each_hex_line_operation(char * data);
 /* MAIN ____________________________________________________________________________*/
 int main()
 {
-        FILE* hex_file_ptr;
-        get_serial_string(2);
-        hex_file_ptr = fopen("./abc.hex" ,"r");
-        if (hex_file_ptr == NULL){ 
-                printf( "FILE OPEN FAIL\n\r"); 
-        } else { 
-                printf("FILE OPEN SUCCESS\n\r");
-        }
+        char *portname = "/dev/ttyUSB0";
+        config_serial_port(portname);
+
+        queue hex_line_q;
+        queue_init(&hex_line_q);
+
+        
+        FILE* hex_file_ptr = open_file("abc.hex");
+        
         /* Keep the cursor at the beging of the file*/
         //fscanf(hex_file_ptr  , "%c" , &ch); 
         ch = getc(hex_file_ptr);
@@ -69,13 +76,20 @@ int main()
                 ch = getc(hex_file_ptr);
         }
 
-        fclose(hex_file_ptr);
 
-        while(1){
+
+
+        
+        close_file(hex_file_ptr);
+
+        // while(1){
                 
-        }
+         //}
         return 0;
 }
+
+
+
 /* Function definition _____________________________________________________________*/
 void each_hex_line_operation(char * data)
 {
@@ -85,6 +99,7 @@ void each_hex_line_operation(char * data)
         }     
         int data_length = hexadecimalToDecimal(rec_lengh); // data bytes length
         
+
         /* Adress extraction */
         for(int i = ADDR_START_INDEX , j = 0 ; i<(ADDR_START_INDEX + ADDR_LENGTH) ; i++ , j++){
                  addr[j] = data[i];
@@ -95,21 +110,13 @@ void each_hex_line_operation(char * data)
         for(int i = REC_TYPE_START_INDEX , j = 0 ; i<(REC_TYPE_START_INDEX + REC_TYPE_LENGTH) ; i++ , j++){
                  rec_type[j] = data[i];
         }
+
         int record_type = hexadecimalToDecimal(rec_type); // Recod type
 
         for(int i = REC_TYPE_START_INDEX , j = 0 ; i<(REC_TYPE_START_INDEX + REC_TYPE_LENGTH) ; i++ , j++){
                  rec_type[j] = data[i];
         }
 
-        
-        
-
-
-
-
-
-
-
-        printf("%d--\n",record_type);
+        //printf("%d--\n",record_type);
 }
   
