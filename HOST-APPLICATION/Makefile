@@ -1,7 +1,7 @@
 
 
 build: .build-impl
-	@echo "Build Successful!"
+	@echo -e "\e[40;32m Build Successful! \e[0m"
 
 
 clean: .clean-impl

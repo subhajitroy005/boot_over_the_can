@@ -1,6 +1,5 @@
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
-#include <data_type_support.h>
 /*
 ALL SERIAL configuration
 */
@@ -9,6 +8,17 @@ ALL SERIAL configuration
 #define SERIAL_READ_TIMEOUT     5               //*100ms
 
 #define MAX_INCOMMING_STRING_LENGTH     20
+
+
+
+
+
+
+
+
+
+
+
 
 
 
