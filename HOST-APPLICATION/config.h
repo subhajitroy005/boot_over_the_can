@@ -17,7 +17,8 @@ ALL SERIAL configuration
 
 
 
-
+/* Debug Macros */
+#define SERIAL_IGNORE 1
 
 
 

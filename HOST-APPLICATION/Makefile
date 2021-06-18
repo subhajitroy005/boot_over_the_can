@@ -4,7 +4,7 @@ build-l: .build-impl
 	@echo -e "\e[40;32m Build Successful! \e[0m"
 
 
-clean: .clean-impl
+clean-l: .clean-impl
 	@echo "Clean Done!"
 
 # include project build rules makefile

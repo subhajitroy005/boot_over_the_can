@@ -15,6 +15,7 @@ Serial Interface related________________________________
 #include <termios.h>
 #include <unistd.h>
 
+#include <time.h>
 
 
 #define FILE_OBJ_TYPE                   FILE*      // File operation related macro

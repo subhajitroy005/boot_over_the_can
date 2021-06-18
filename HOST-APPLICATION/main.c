@@ -11,6 +11,10 @@
 #include <queue.h>
 
 /* Variable Declaraation ___________________________________________________________*/
+char *portname = "/dev/ttyUSB0";
+queue hex_line_q;
+FILE* hex_file_ptr;
+
 uint8_t temp[100];
 uint32_t i = 0;
 uint16_t data;
@@ -42,17 +46,37 @@ char check_sum[2] = {};
 /* Function Prototype ______________________________________________________________*/
 void each_hex_line_operation(char * data);
 
+
+
+
 /* MAIN ____________________________________________________________________________*/
 int main()
 {
-        char *portname = "/dev/ttyUSB0";
-        config_serial_port(portname);
-
-        queue hex_line_q;
+        /*______ Serial section Init________*/
+        #if SERIAL_IGNORE
+                printf("Serial Port init ignore\n\r");
+        #else
+                config_serial_port(portname); // If the seril init not enabled in debug
+        #endif
+        /*_______ Line Queue section init ____*/
         queue_init(&hex_line_q);
 
         
-        FILE* hex_file_ptr = open_file("abc.hex");
+        clock_t save_time = 1*CLOCKS_PER_SEC + clock();
+        printf("%ld\n",CLOCKS_PER_SEC);
+        printf("%ld\n",clock());
+        while(save_time > clock());
+        printf("%ld\n",clock());
+
+
+
+
+
+
+
+
+
+        hex_file_ptr = open_file("abc.hex");
         
         /* Keep the cursor at the beging of the file*/
         //fscanf(hex_file_ptr  , "%c" , &ch); 
