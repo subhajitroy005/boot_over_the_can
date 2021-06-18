@@ -1,6 +1,6 @@
 
 
-build: .build-impl
+build-l: .build-impl
 	@echo -e "\e[40;32m Build Successful! \e[0m"
 
 
