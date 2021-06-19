@@ -11,25 +11,18 @@
 #include <queue.h>
 
 /* Variable Declaraation ___________________________________________________________*/
-char *portname = "/dev/ttyUSB0";
-char* global_hex_file_name = "abc.hex";
-can_context_type can_rw;
-queue hex_line_q;
-FILE* hex_file_ptr;
-
-uint8_t temp[100];
-uint32_t i = 0;
-uint16_t data;
-
+can_context_type can_rw; // operation for CAN [Api supprt]
+queue hex_line_q; // Queu operation for hex file lines
 
 //--------------- Individual data filed buffer _
-
+char *portname = "/dev/ttyUSB0";
+char* global_hex_file_name = "abc.hex";
 
 
 
 /* Function Prototype ______________________________________________________________*/
 void each_hex_line_operation(char * data);
-void read_file_to_queue(char * file_name);
+void read_file_to_queue(char * file_name , queue* q);
 
 
 
@@ -41,13 +34,26 @@ int main()
         /*_______ Line Queue section init ____*/
         queue_init(&hex_line_q);
         /* Read the hex file and put the data to queue line bt line*/
-        read_file_to_queue(global_hex_file_name); // Read all the file 
+        read_file_to_queue(global_hex_file_name , &hex_line_q); // Read all the file 
         
-        clock_t save_time = 1*CLOCKS_PER_SEC + clock();
-        printf("%ld\n",CLOCKS_PER_SEC);
-        printf("%ld\n",clock());
-        while(save_time > clock());
-        printf("%ld\n",clock());
+
+
+        printf("QS %d\n" , queue_size(&hex_line_q));
+
+        while(queue_size(&hex_line_q)!=0)
+        {       uint8_t data[100];
+                peek(&hex_line_q , data);
+                printf("%s\n", data);
+                memset(data , 0 , 100);
+                pop(&hex_line_q);
+        }
+
+        // clock_t save_time = 1*CLOCKS_PER_SEC + clock();
+        // printf("%ld\n",CLOCKS_PER_SEC);
+        // printf("%ld\n",clock());
+        // while(save_time > clock());
+        // printf("%ld\n",clock());
+
 
 
         
@@ -74,7 +80,7 @@ int main()
 
 
 /* Function definition _____________________________________________________________*/
-void read_file_to_queue(char * file_name)
+void read_file_to_queue(char * file_name , queue* q)
 {       
         /*Operational Local variables*/
         char ch;
@@ -90,7 +96,8 @@ void read_file_to_queue(char * file_name)
                 //printf("%c",ch);
 
                 if(ch == '\n'){ // One line is completed perform the sting related operation
-                        each_hex_line_operation(line_buffer);  
+                        //each_hex_line_operation(line_buffer);
+                        push(q , line_buffer); // Push line data to queue
                 } else if(ch == ':'){ // Strat of the line clear all the sting and variables and alos the :
                         memset(line_buffer , 0 , 200);
                         line_buff_index = 0;
@@ -113,8 +120,6 @@ void each_hex_line_operation(char * data)
         char data_filed[100] = {};
         char check_sum[2] = {};
         //printf("%s\n\r",data);
-
-
         /*Record length extract */
         for(int i = REC_LENGTH_START_INDEX , j = 0 ; i< (REC_LENGTH_START_INDEX + REC_LENGTH_LENGTH) ; i++ , j++){
                  rec_lengh[j] = data[i];
