@@ -5,62 +5,43 @@
 
 #include <utility_support.h>
 #include <file_handling_support.h>
-#include <serial_drv_linux.h>
+#include <can_driver.h> // For can related support
 #include <config.h>
 #include <data_type_support.h>
 #include <queue.h>
 
 /* Variable Declaraation ___________________________________________________________*/
 char *portname = "/dev/ttyUSB0";
+char* global_hex_file_name = "abc.hex";
+can_context_type can_rw;
 queue hex_line_q;
 FILE* hex_file_ptr;
 
 uint8_t temp[100];
 uint32_t i = 0;
 uint16_t data;
-char ch;
-char line_buffer[200] = {};
-uint32_t line_buff_index = 0;
+
 
 //--------------- Individual data filed buffer _
-#define REC_LENGTH_START_INDEX 0
-#define REC_LENGTH_LENGTH 2
-char rec_lengh[2] = {}; // Record length
-
-#define ADDR_START_INDEX 2
-#define ADDR_LENGTH 4
-char addr[4] = {};
-
-#define REC_TYPE_START_INDEX 6
-#define REC_TYPE_LENGTH 2
-char rec_type[2] = {};
-
-#define DATA_START_INDEX 8
-#define DATA_LENGTH 2
-char data_filed[100] = {};
 
 
-char check_sum[2] = {};
 
 
 /* Function Prototype ______________________________________________________________*/
 void each_hex_line_operation(char * data);
-
+void read_file_to_queue(char * file_name);
 
 
 
 /* MAIN ____________________________________________________________________________*/
 int main()
 {
-        /*______ Serial section Init________*/
-        #if SERIAL_IGNORE
-                printf("Serial Port init ignore\n\r");
-        #else
-                config_serial_port(portname); // If the seril init not enabled in debug
-        #endif
+        can_rw.can_serial_port = portname;
+        can_init(&can_rw);
         /*_______ Line Queue section init ____*/
         queue_init(&hex_line_q);
-
+        /* Read the hex file and put the data to queue line bt line*/
+        read_file_to_queue(global_hex_file_name); // Read all the file 
         
         clock_t save_time = 1*CLOCKS_PER_SEC + clock();
         printf("%ld\n",CLOCKS_PER_SEC);
@@ -69,42 +50,20 @@ int main()
         printf("%ld\n",clock());
 
 
-
-
-
-
-
-
-
-        hex_file_ptr = open_file("abc.hex");
         
-        /* Keep the cursor at the beging of the file*/
-        //fscanf(hex_file_ptr  , "%c" , &ch); 
-        ch = getc(hex_file_ptr);
-        while(ch != EOF){
-                //printf("%c",ch);
 
-                if(ch == '\n'){ // One line is completed perform the sting related operation
-                        each_hex_line_operation(line_buffer);  
-                } else if(ch == ':'){ // Strat of the line clear all the sting and variables and alos the :
-                        memset(rec_lengh , 0 , 2);
-                        memset(addr , 0 , 4);
-                        memset(rec_type , 0 , 2);
-                        memset(data_filed , 0, 100);
-                        memset(check_sum , 0, 2);
-                        memset(line_buffer , 0 , 200);
-                        line_buff_index = 0;
-                } else { // Put data in string
-                        line_buffer[line_buff_index++] = ch;
-                }
-                ch = getc(hex_file_ptr);
-        }
+
 
 
 
 
         
-        close_file(hex_file_ptr);
+
+
+
+
+        
+        
 
         // while(1){
                 
@@ -115,8 +74,47 @@ int main()
 
 
 /* Function definition _____________________________________________________________*/
+void read_file_to_queue(char * file_name)
+{       
+        /*Operational Local variables*/
+        char ch;
+        char line_buffer[200] = {};
+        uint32_t line_buff_index = 0;
+
+         FILE* file_ptr = open_file(file_name);
+        
+        /* Keep the cursor at the beging of the file*/
+        //fscanf(hex_file_ptr  , "%c" , &ch); 
+        ch = getc(file_ptr);
+        while(ch != EOF){
+                //printf("%c",ch);
+
+                if(ch == '\n'){ // One line is completed perform the sting related operation
+                        each_hex_line_operation(line_buffer);  
+                } else if(ch == ':'){ // Strat of the line clear all the sting and variables and alos the :
+                        memset(line_buffer , 0 , 200);
+                        line_buff_index = 0;
+                } else { // Put data in string
+                        line_buffer[line_buff_index++] = ch;
+                }
+                ch = getc(file_ptr);
+        }
+        
+        printf("Reading HEX File: Complete!\n\r");
+        close_file(file_ptr);
+        printf("HEX File Closed\n\r");
+}
+
 void each_hex_line_operation(char * data)
-{
+{       
+        char rec_lengh[2] = {}; // Record length
+        char addr[4] = {};
+        char rec_type[2] = {};
+        char data_filed[100] = {};
+        char check_sum[2] = {};
+        //printf("%s\n\r",data);
+
+
         /*Record length extract */
         for(int i = REC_LENGTH_START_INDEX , j = 0 ; i< (REC_LENGTH_START_INDEX + REC_LENGTH_LENGTH) ; i++ , j++){
                  rec_lengh[j] = data[i];
@@ -128,7 +126,6 @@ void each_hex_line_operation(char * data)
         for(int i = ADDR_START_INDEX , j = 0 ; i<(ADDR_START_INDEX + ADDR_LENGTH) ; i++ , j++){
                  addr[j] = data[i];
         }
-
         /* Record type extraciton */
 
         for(int i = REC_TYPE_START_INDEX , j = 0 ; i<(REC_TYPE_START_INDEX + REC_TYPE_LENGTH) ; i++ , j++){
@@ -140,7 +137,5 @@ void each_hex_line_operation(char * data)
         for(int i = REC_TYPE_START_INDEX , j = 0 ; i<(REC_TYPE_START_INDEX + REC_TYPE_LENGTH) ; i++ , j++){
                  rec_type[j] = data[i];
         }
-
-        //printf("%d--\n",record_type);
 }
   

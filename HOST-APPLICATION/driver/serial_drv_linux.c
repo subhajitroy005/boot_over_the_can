@@ -49,6 +49,7 @@ void config_serial_port(char* port_name)
                 printf("Error from tcsetattr: %s\n\r", strerror(errno));
                 exit(EXIT_FAILURE);
         }
+        printf("Serial OPEN: OK\n\r");
 }
 
 

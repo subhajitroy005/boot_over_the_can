@@ -41,8 +41,17 @@ typedef struct _queue // Queue
 	unsigned int size;
 }queue;
 
-
-
+/*
+*_______________________________________________________
+                CAN Comm Data type
+________________________________________________________
+*/
+typedef struct _can_context //
+{
+	uint8_t can_id;
+	uint8_t can_data;
+	char * can_serial_port;
+}can_context_type;
 
 
 
