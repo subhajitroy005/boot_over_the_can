@@ -10,6 +10,21 @@ ALL SERIAL configuration
 #define MAX_INCOMMING_STRING_LENGTH     20
 
 /*
+CAN Related definitions
+*/
+#define CAN_DATA_LENGTH_IN_PACKET 8 
+
+
+
+// Commands message id
+#define CAN_ASK_PAGE_SIZE 0
+
+
+
+
+
+
+/*
 HEX file related definition
 */
 #define REC_LENGTH_START_INDEX 0
@@ -24,9 +39,8 @@ HEX file related definition
 
 
 
-
 /* Debug Macros */
-#define SERIAL_IGNORE 
+#define SERIAL_IGNORE 1
 
 
 

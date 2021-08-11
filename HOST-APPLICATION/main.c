@@ -14,8 +14,13 @@
 /* Variable Declaraation ___________________________________________________________*/
 can_context_type can_rw; // operation for CAN [Api supprt]
 queue hex_line_q; // Queu operation for hex file lines
+type_machine_state app; // Hold data for machine states
+uint8_t data_transfter_method = CAN;
+
 
 clock_t process_save_time;
+
+
 
 
 
@@ -33,51 +38,65 @@ void read_file_to_queue(char * file_name , queue* q);
 
 /* MAIN ____________________________________________________________________________*/
 int main()
-{
+{       
         can_rw.can_serial_port = portname;
-        can_init(&can_rw);
-        /*_______ Line Queue section init ____*/
-        queue_init(&hex_line_q);
-        /* Read the hex file and put the data to queue line bt line*/
-        read_file_to_queue(global_hex_file_name , &hex_line_q); // Read all the file 
         
-
-
-        // printf("QS %d\n" , queue_size(&hex_line_q));
-
-        // while(queue_size(&hex_line_q)!=0){
-        //         uint8_t data[100];
-        //         peek(&hex_line_q , data);
-        //         printf("%s\n", data);
-        //         memset(data , 0 , 100);
-        //         pop(&hex_line_q);
-        // }
-
-        // clock_t save_time = 1*CLOCKS_PER_SEC + clock();
-        // printf("%ld\n",CLOCKS_PER_SEC);
-        // printf("%ld\n",clock());
-        // while(save_time > clock());
-        // printf("%ld\n",clock());
         
-        process_save_time = millis();
-        while((millis() - process_save_time) < 10*CLOCKS_PER_SEC){
-                
-                
-                
-                
-                
-                
-                write_serial_string("Hello");
-
         
+        
+        app.state = INIT;
+        while(1){
+                switch(app.state){ //State machine data
+                        
+                        /* INIT state : Initialize all the driver and otehr stuffs*/
+                        case INIT:
+                                /*Init the can comm through the serial*/
+                                can_init(&can_rw);
+                                /*_______ Line Queue section init ____*/
+                                queue_init(&hex_line_q);
 
-
+                                app.state = READ_FILE;
+                        break;
                 
+                        case READ_FILE:
+                                /* Read the hex file and put the data to queue line bt line*/
+                                read_file_to_queue(global_hex_file_name , &hex_line_q); // Read all the file 
 
-        } 
+                                app.state = ASK_PAGE_SIZE;
+                        break;
+
+                        case ASK_PAGE_SIZE:
+                                can_rw.can_id = CAN_ASK_PAGE_SIZE;
+                                can_rw.can_data[0] = 1;
+                                can_rw.len = 1;
+                                can_write(&can_rw);
+
+                                app.state = ERROR;
+                        break;
 
 
-        printf("TimeOut Occurs! No response from Host programmer\n\r"); 
+
+
+
+                        case FLASH_WRITE:
+
+                        break;
+                
+                        
+                
+                
+                
+                        case ERROR:
+                                printf("Error at state Execution! Abort !\n\r");
+                                goto out_from_loop;
+                        break;
+                }
+        }
+
+        out_from_loop:
+
+        //printf("TimeOut Occurs! No response from Host programmer\n\r");
+        printf("****************    Program Exit!      ************\n\r");
         return 0;
 }
 

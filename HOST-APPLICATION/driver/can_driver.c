@@ -8,3 +8,9 @@ void can_init(const can_context_type * can)
                 config_serial_port(can->can_serial_port); // If the seril init not enabled in debug
         #endif
 }
+
+void can_write(const can_context_type * can)
+{
+        // Serial String Format tiiildddd..dd\n | max data is the byte
+        write_serial_string("hello");
+}
