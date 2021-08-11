@@ -26,7 +26,7 @@ HEX file related definition
 
 
 /* Debug Macros */
-#define SERIAL_IGNORE 1
+#define SERIAL_IGNORE 
 
 
 

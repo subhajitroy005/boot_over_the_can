@@ -6,6 +6,7 @@
 #include <utility_support.h>
 #include <file_handling_support.h>
 #include <can_driver.h> // For can related support
+#include <time_drv_linux.h>
 #include <config.h>
 #include <data_type_support.h>
 #include <queue.h>
@@ -13,6 +14,10 @@
 /* Variable Declaraation ___________________________________________________________*/
 can_context_type can_rw; // operation for CAN [Api supprt]
 queue hex_line_q; // Queu operation for hex file lines
+
+clock_t process_save_time;
+
+
 
 //--------------- Individual data filed buffer _
 char *portname = "/dev/ttyUSB0";
@@ -38,42 +43,41 @@ int main()
         
 
 
-        printf("QS %d\n" , queue_size(&hex_line_q));
+        // printf("QS %d\n" , queue_size(&hex_line_q));
 
-        while(queue_size(&hex_line_q)!=0)
-        {       uint8_t data[100];
-                peek(&hex_line_q , data);
-                printf("%s\n", data);
-                memset(data , 0 , 100);
-                pop(&hex_line_q);
-        }
+        // while(queue_size(&hex_line_q)!=0){
+        //         uint8_t data[100];
+        //         peek(&hex_line_q , data);
+        //         printf("%s\n", data);
+        //         memset(data , 0 , 100);
+        //         pop(&hex_line_q);
+        // }
 
         // clock_t save_time = 1*CLOCKS_PER_SEC + clock();
         // printf("%ld\n",CLOCKS_PER_SEC);
         // printf("%ld\n",clock());
         // while(save_time > clock());
         // printf("%ld\n",clock());
-
-
-
         
-
-
-
-
-
-
-        
-
-
-
-
-        
-        
-
-        // while(1){
+        process_save_time = millis();
+        while((millis() - process_save_time) < 10*CLOCKS_PER_SEC){
                 
-         //}
+                
+                
+                
+                
+                
+                write_serial_string("Hello");
+
+        
+
+
+                
+
+        } 
+
+
+        printf("TimeOut Occurs! No response from Host programmer\n\r"); 
         return 0;
 }
 
