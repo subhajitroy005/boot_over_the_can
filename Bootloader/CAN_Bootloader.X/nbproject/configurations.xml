@@ -246,7 +246,14 @@
                    projectFiles="false">
       <itemPath>Makefile</itemPath>
     </logicalFolder>
+    <itemPath>../../../../../Desktop/CAN_USB_Converter/CAN_USB_Converter/support_lib/c_queue_array.h</itemPath>
+    <itemPath>../../../../../Desktop/CAN_USB_Converter/CAN_USB_Converter/support_lib/utility_support.h</itemPath>
+    <itemPath>../../../../../Desktop/CAN_USB_Converter/CAN_USB_Converter/support_lib/zen_can_api.h</itemPath>
+    <itemPath>../../../../../Desktop/CAN_USB_Converter/CAN_USB_Converter/support_lib/zen_message_id.h</itemPath>
   </logicalFolder>
+  <sourceRootList>
+    <Elem>../../../../../Desktop/CAN_USB_Converter/CAN_USB_Converter/support_lib</Elem>
+  </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
     <conf name="Default" type="2">

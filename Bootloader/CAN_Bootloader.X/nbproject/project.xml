@@ -12,7 +12,9 @@
             <asminc-extensions/>
             <sourceEncoding>UTF-8</sourceEncoding>
             <make-dep-projects/>
-            <sourceRootList/>
+            <sourceRootList>
+                <sourceRootElem>../../../../../Desktop/CAN_USB_Converter/CAN_USB_Converter/support_lib</sourceRootElem>
+            </sourceRootList>
             <confList>
                 <confElem>
                     <name>Default</name>

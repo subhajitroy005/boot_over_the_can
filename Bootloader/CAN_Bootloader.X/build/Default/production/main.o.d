@@ -69,7 +69,7 @@ build/Default/production/main.o: main.c atmel_start.h driver_init.h \
  hal/include/hpl_timer.h hpl/tc/hpl_tc_base.h hal/include/hpl_pwm.h \
  hal/include/hal_can_async.h hal/include/hpl_can.h \
  hal/include/hpl_can_async.h hal/utils/include/utils.h stdio_start.h \
- stdio_redirect/stdio_io.h
+ stdio_redirect/stdio_io.h utility_support.h
 
 atmel_start.h:
 
@@ -394,3 +394,5 @@ hal/utils/include/utils.h:
 stdio_start.h:
 
 stdio_redirect/stdio_io.h:
+
+utility_support.h:
