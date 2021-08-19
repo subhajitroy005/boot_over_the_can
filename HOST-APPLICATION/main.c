@@ -25,8 +25,15 @@ clock_t process_save_time;
 
 
 //--------------- Individual data filed buffer _
-char *portname = "/dev/ttyUSB0";
+char *portname = "/dev/ttyACM0";
 char* global_hex_file_name = "abc.hex";
+
+
+// MCU parametres
+int mcu_pagesize = 0;
+
+
+
 
 
 
@@ -49,7 +56,7 @@ int main()
                 switch(app.state){ //State machine data
                         
                         /* INIT state : Initialize all the driver and otehr stuffs*/
-                        case INIT:
+                        case INIT: //**************************************************************************
                                 /*Init the can comm through the serial*/
                                 can_init(&can_rw);
                                 /*_______ Line Queue section init ____*/
@@ -58,36 +65,59 @@ int main()
                                 app.state = READ_FILE;
                         break;
                 
-                        case READ_FILE:
+                        case READ_FILE: //**************************************************************************
                                 /* Read the hex file and put the data to queue line bt line*/
                                 read_file_to_queue(global_hex_file_name , &hex_line_q); // Read all the file 
 
                                 app.state = ASK_PAGE_SIZE;
                         break;
 
-                        case ASK_PAGE_SIZE:
-                                can_rw.can_id = CAN_ASK_PAGE_SIZE;
+                        case ASK_PAGE_SIZE: //**************************************************************************
+                                can_rw.can_id = 1; //CAN_ASK_PAGE_SIZE;
                                 can_rw.can_data[0] = 1;
                                 can_rw.len = 1;
                                 can_write(&can_rw);
+                                printf("Pagesize Asked------------!\n\r");
+                                app.state = READ_SERIAL_CAN_DATA;
+                        break;
 
-                                app.state = ERROR;
+                        
+
+                        case DECODE_CAN_DATA: //**************************************************************************
+                                printf("CAN Message ID received: %x\n\r",can_rw.can_id);
+                                switch(can_rw.can_id){
+                                       case CAN_ASK_PAGE_SIZE: // Page reply get
+                                                if(can_rw.can_data[0] != 0){ // page size received
+                                                        mcu_pagesize = can_rw.can_data[0];
+                                                        printf("MCU Page Size: %d\n\r",mcu_pagesize);
+                                                        app.state = ERROR;
+                                                } else {
+                                                        printf("CAN: Pazesize asked err in data!\n\r");
+                                                        app.state = ERROR;
+                                                }
+                                       break;
+
+                                       default:
+                                                printf("CAN Message ID Not listed!\n\r");
+                                                app.state = ERROR;
+                                       break;
+                               }
                         break;
 
 
-
-
-
-                        case FLASH_WRITE:
+                        case FLASH_WRITE: //**************************************************************************
 
                         break;
                 
                         
                 
+                        case READ_SERIAL_CAN_DATA: //**************************************************************************
+                               can_read(&can_rw); //  Read the data from serial
+                               app.state = DECODE_CAN_DATA;
+                        break;
                 
-                
-                        case ERROR:
-                                printf("Error at state Execution! Abort !\n\r");
+                        case ERROR: //**************************************************************************
+                                printf("\n\r\n\rError at state Execution! Abort !\n\r");
                                 goto out_from_loop;
                         break;
                 }
@@ -96,7 +126,7 @@ int main()
         out_from_loop:
 
         //printf("TimeOut Occurs! No response from Host programmer\n\r");
-        printf("****************    Program Exit!      ************\n\r");
+        printf("\n\r****************    Program Exit!      ************\n\r");
         return 0;
 }
 

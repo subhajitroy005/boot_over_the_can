@@ -23,10 +23,9 @@ void write_serial_string(char* string_data);
 /**
  * \brief read a string to serial port
  *
- * \param[uint8_t* len]: Pointer to the data length,
  * \param[uint8_t * buffer]: Pointer to the buffer to be filled [string],
  */
-void read_serial_string(uint8_t * buffer , int* len);
+void read_serial_string(uint8_t * buffer);
 
 
 

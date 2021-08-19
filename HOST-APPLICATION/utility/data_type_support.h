@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <stdlib.h>
+#include <ctype.h>
 /*
 Serial Interface related________________________________
 */
@@ -42,7 +43,9 @@ enum machine_states_declaration{
 	READ_FILE,
 	WAIT_FOR_REPLY,
 	FLASH_WRITE,
-	ASK_PAGE_SIZE
+	ASK_PAGE_SIZE,
+	READ_SERIAL_CAN_DATA,
+	DECODE_CAN_DATA
 };
 
 

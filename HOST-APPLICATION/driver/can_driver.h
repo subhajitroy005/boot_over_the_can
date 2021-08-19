@@ -10,7 +10,7 @@
 
 void can_init(const can_context_type * can);
 void can_write(const can_context_type * can);
-
+void can_read(can_context_type * can);
 
 
 

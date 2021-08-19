@@ -7,7 +7,7 @@ ALL SERIAL configuration
 #define SERIAL_WRITE_BAUD       B115200
 #define SERIAL_READ_TIMEOUT     5               //*100ms
 
-#define MAX_INCOMMING_STRING_LENGTH     20
+#define MAX_INCOMMING_STRING_LENGTH     23
 
 /*
 CAN Related definitions
@@ -17,7 +17,7 @@ CAN Related definitions
 
 
 // Commands message id
-#define CAN_ASK_PAGE_SIZE 0
+#define CAN_ASK_PAGE_SIZE 1
 
 
 
@@ -40,8 +40,8 @@ HEX file related definition
 
 
 /* Debug Macros */
-#define SERIAL_IGNORE 1
-
+#define SERIAL_IGNORE 0
+#define INCOMMING_CAN_SERIAL_PRINT      0
 
 
 
