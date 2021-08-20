@@ -18,6 +18,7 @@
 typedef struct app_state_machine{
     uint8_t state;
 }app_state_machine_type; 
+app_state_machine_type app; //state
 enum states{
     ERROR = 0,
     INIT,
@@ -28,10 +29,42 @@ enum states{
     RESET_AT_BOOT_ERROR
 };
 
+typedef struct flash_wr_info{
+	uint32_t curr_page_addr;
+	uint32_t last_sent_ext_lin_addr;
+	uint32_t wr_success_page_counter;
+	uint32_t write_page_byte_counter;
+
+	/* Temp data buffers*/
+	 uint8_t temp_ext_lin_addr_buff[4]; // temp for string conv
+	 uint32_t temp_ext_lin_addr; // temp for doing the bit shifting
+     uint32_t temp_curr_page_addr; //temp for sending over can
+     uint8_t temp_8bit_data;
+     uint32_t temp_32bit_data;
+}flash_wr_info_type;
+flash_wr_info_type flash_write_info;
+
+typedef union bits_conversion{
+    uint8_t byte_arr[8];
+    uint8_t byte_data;
+    uint32_t bit32_data;
+}bits_conversion_type;
+bits_conversion_type bits_union;
+
+
+
+
 
 // Message IDS declaration
 #define CAN_ASK_PAGE_SIZE 1
-
+#define CAN_SEND_FLASH_ADRESS 2
+#define CAN_SEND_FLASH_DATA 3
+#define CAN_SEND_EOF 4
+#define CAN_SEND_EXT_SEG_ADDR 5
+#define CAN_SEND_START_SEG_ADDR 6
+#define CAN_SEND_EXT_LIN_ADDR 7
+#define CAN_SEND_START_LIN_ADDR 8
+#define CAN_SEND_JUMP_TO_APP 9
 
 
 
@@ -40,7 +73,7 @@ enum states{
 
 
 #define MAX_FLASH_PAGE_SIZE_IN_BYTE     128
-
+#define APP_START_ABS_ADRESS            32769 // start app from 0x8001       
 
 #define BOOTLOADER_EVENT_PRINT_ENABLE   0
 
@@ -100,7 +133,7 @@ int main(void)
 	atmel_start_init();
    
     /* Machine states data */
-    app_state_machine_type app; //state
+    
      // hold the can data
     /*All init section  ===========================*/
     usart_sync_get_io_descriptor(&TARGET_IO, &serial_io);	// Get the descriptor
@@ -122,10 +155,10 @@ int main(void)
     printf("Flash Write status %d\n\r",flash_write_check_flag);
     
     */
-    
+    flash_write_info.curr_page_addr = APP_START_ABS_ADRESS;
     
     app.state = INIT;
-    io_write(serial_io , (uint8_t *)"CAN/UART Bootloader!\n\r", 22);   
+    //io_write(serial_io , (uint8_t *)"CAN/UART Bootloader!\n\r", 22);   
 	while (1) {
         switch(app.state){
             case INIT:
@@ -150,6 +183,54 @@ int main(void)
                         send_serial_data(&can);
                         app.state = SERIAL_CAN_READ;
                     break;
+                    case CAN_SEND_FLASH_DATA: // a flash adress has send
+                        
+                   
+                    break;
+                    
+                    case CAN_SEND_EOF:
+                    break;
+                    
+                    case CAN_SEND_EXT_SEG_ADDR:
+                    break;
+                    
+                    case CAN_SEND_START_SEG_ADDR:
+                    break;
+                        
+                    case CAN_SEND_EXT_LIN_ADDR: //  A liner adress
+                        memset(bits_union.byte_arr, 0, 8);
+                        bits_union.byte_arr[0] = can.can_data[0];
+                        bits_union.byte_arr[1] = can.can_data[1];
+                        flash_write_info.curr_page_addr |= ((bits_union.bit32_data << 16) & 0xFFFF0000) ;
+                        
+                        
+                        can.can_id = CAN_SEND_EXT_LIN_ADDR;
+                        can.len = 4;
+                        /*
+                         * flash_write_info.temp_8bit_data = (uint8_t)flash_write_info.curr_page_addr;
+                        can.can_data[0] = bits_union.byte_arr[0];
+                        flash_write_info.temp_8bit_data = (uint8_t)(flash_write_info.curr_page_addr >> 8);
+                        can.can_data[1] = bits_union.byte_arr[1];
+                        flash_write_info.temp_8bit_data = (flash_write_info.curr_page_addr >> 8);
+                        can.can_data[2] =  flash_write_info.temp_8bit_data;
+                        flash_write_info.temp_8bit_data = (flash_write_info.curr_page_addr >> 8);
+                        can.can_data[3] = flash_write_info.temp_8bit_data;
+                         */
+                        can.can_data[0] = (uint8_t)flash_write_info.curr_page_addr;
+                        can.can_data[1] = (uint8_t)(flash_write_info.curr_page_addr>>8);
+                        can.can_data[2] = (uint8_t)(flash_write_info.curr_page_addr>>16);
+                        can.can_data[3] = (uint8_t)(flash_write_info.curr_page_addr>>24);
+                        
+                        send_serial_data(&can); // send the page starting address
+                        app.state = SERIAL_CAN_READ;
+                    break;
+                    
+                    case CAN_SEND_START_LIN_ADDR:
+                    break;
+                    
+                    
+                    
+                    
                     
                     default:
                         // Wrong ID so read again for next id
@@ -238,7 +319,7 @@ void read_serial_data(can_data_type * can , app_state_machine_type * app)
             //io_write(lv_io , recv_can_id_temp, 3);
 			serial_can_tx_id = hexadecimalToDecimal(serial_recv_can_id_temp);
             can->can_id = serial_can_tx_id;
-            //printf("rec id: %d\n\r", can->can_id);
+            //printf("rec id: %x\n\r", can->can_id);
 			
 			// Copy the len from the data bytes and convert it to actual values
 			serial_recv_can_len[0] = recv_serial_frame[3];

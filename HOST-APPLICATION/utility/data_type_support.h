@@ -45,7 +45,8 @@ enum machine_states_declaration{
 	FLASH_WRITE,
 	ASK_PAGE_SIZE,
 	READ_SERIAL_CAN_DATA,
-	DECODE_CAN_DATA
+	DECODE_CAN_DATA,
+	DECODE_HEX_FILE
 };
 
 
@@ -82,6 +83,24 @@ typedef struct _can_context //
 	uint8_t len;
 	char * can_serial_port;
 }can_context_type;
+
+/*
+*______________________________________________________
+		Flash write related
+_______________________________________________________
+*/
+typedef struct flash_wr_info{
+	uint32_t curr_page_addr;
+	uint32_t last_sent_ext_lin_addr;
+	uint32_t wr_success_page_counter;
+	uint32_t write_page_byte_counter; 
+	uint32_t curr_mcu_page_adress;
+	/* Temp data buffers*/
+	 uint8_t temp_ext_lin_addr_buff[4]; // temp for string conv
+	 uint32_t temp_ext_lin_addr; // temp for doing the bit shifting
+}flash_wr_info_type;
+
+
 
 
 

@@ -16,11 +16,17 @@ CAN Related definitions
 
 
 
-// Commands message id
+// Commands message ids ++++++++++++++++++++++++++++++++++++++++
 #define CAN_ASK_PAGE_SIZE 1
-
-
-
+#define CAN_SEND_FLASH_ADRESS 2
+#define CAN_SEND_FLASH_DATA 3
+#define CAN_SEND_EOF 4
+#define CAN_SEND_EXT_SEG_ADDR 5
+#define CAN_SEND_START_SEG_ADDR 6
+#define CAN_SEND_EXT_LIN_ADDR 7
+#define CAN_SEND_START_LIN_ADDR 8
+#define CAN_SEND_JUMP_TO_APP 9
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
@@ -42,7 +48,8 @@ HEX file related definition
 /* Debug Macros */
 #define SERIAL_IGNORE 0
 #define INCOMMING_CAN_SERIAL_PRINT      0
-
-
+#define OUTGOING_CAN_SERIAL_PRINT       0
+#define EACH_HEX_FILE_LINE_DECOMPOSE_PRINT      0
+#define FLAS_DEBUG_EN 1
 
 #endif
