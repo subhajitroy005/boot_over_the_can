@@ -59,7 +59,9 @@ void write_serial_string(char* string_data)
         if(data_written != strlen(string_data)){
                 printf("Alert! Serial write err: Data not transmitted completely\n\r");
         } else {
-                printf("Serial write: -%s-",string_data );
+                #if OUTGOING_CAN_SERIAL_PRINT
+                        printf("Serial write: -%s-",string_data );
+                #endif
         }
 }
 

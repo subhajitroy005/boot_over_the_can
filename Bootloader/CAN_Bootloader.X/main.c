@@ -34,7 +34,8 @@ typedef struct flash_wr_info{
 	uint32_t last_sent_ext_lin_addr;
 	uint32_t wr_success_page_counter;
 	uint32_t write_page_byte_counter;
-
+    uint32_t page_byte_counter;
+    uint32_t flash_write_seq;
 	/* Temp data buffers*/
 	 uint8_t temp_ext_lin_addr_buff[4]; // temp for string conv
 	 uint32_t temp_ext_lin_addr; // temp for doing the bit shifting
@@ -65,9 +66,10 @@ bits_conversion_type bits_union;
 #define CAN_SEND_EXT_LIN_ADDR 7
 #define CAN_SEND_START_LIN_ADDR 8
 #define CAN_SEND_JUMP_TO_APP 9
-
-
-
+#define CAN_SEND_PAGE_COMPLETE 10
+#define CAN_SEND_DATA_WRITE_READY 11
+#define CAN_SEND_EOF_MCU_RESET 12
+#define CAN_SENT_FLASH_WRITE_ERROR 13
 
 
 
@@ -109,9 +111,10 @@ can_data_type can;
 
 
 
-
+uint8_t page_byte_byff[MAX_FLASH_PAGE_SIZE_IN_BYTE];
 uint32_t page_size = 255;
-uint16_t i;
+int flash_write_check_flag = 0;
+uint32_t i;
 //------------------------------------------------------------------------------------
 void write_array_data_to_flash(uint8_t * data , int * length , int* abs_adress);
 int get_flash_page_size();
@@ -155,6 +158,8 @@ int main(void)
     printf("Flash Write status %d\n\r",flash_write_check_flag);
     
     */
+    flash_write_info.page_byte_counter = 0;
+    memset(page_byte_byff, 0, MAX_FLASH_PAGE_SIZE_IN_BYTE);
     flash_write_info.curr_page_addr = APP_START_ABS_ADRESS;
     
     app.state = INIT;
@@ -179,13 +184,10 @@ int main(void)
                     case CAN_ASK_PAGE_SIZE:
                         can.can_id = CAN_ASK_PAGE_SIZE;
                         can.can_data[0] = (uint8_t)get_flash_page_size();
+                        page_size = can.can_data[0]; // update the page size
                         can.len = 1;
                         send_serial_data(&can);
                         app.state = SERIAL_CAN_READ;
-                    break;
-                    case CAN_SEND_FLASH_DATA: // a flash adress has send
-                        
-                   
                     break;
                     
                     case CAN_SEND_EOF:
@@ -202,35 +204,102 @@ int main(void)
                         bits_union.byte_arr[0] = can.can_data[0];
                         bits_union.byte_arr[1] = can.can_data[1];
                         flash_write_info.curr_page_addr |= ((bits_union.bit32_data << 16) & 0xFFFF0000) ;
-                        
-                        
                         can.can_id = CAN_SEND_EXT_LIN_ADDR;
                         can.len = 4;
-                        /*
-                         * flash_write_info.temp_8bit_data = (uint8_t)flash_write_info.curr_page_addr;
-                        can.can_data[0] = bits_union.byte_arr[0];
-                        flash_write_info.temp_8bit_data = (uint8_t)(flash_write_info.curr_page_addr >> 8);
-                        can.can_data[1] = bits_union.byte_arr[1];
-                        flash_write_info.temp_8bit_data = (flash_write_info.curr_page_addr >> 8);
-                        can.can_data[2] =  flash_write_info.temp_8bit_data;
-                        flash_write_info.temp_8bit_data = (flash_write_info.curr_page_addr >> 8);
-                        can.can_data[3] = flash_write_info.temp_8bit_data;
-                         */
-                        can.can_data[0] = (uint8_t)flash_write_info.curr_page_addr;
-                        can.can_data[1] = (uint8_t)(flash_write_info.curr_page_addr>>8);
-                        can.can_data[2] = (uint8_t)(flash_write_info.curr_page_addr>>16);
-                        can.can_data[3] = (uint8_t)(flash_write_info.curr_page_addr>>24);
-                        
+                        flash_write_info.temp_32bit_data = flash_write_info.curr_page_addr; // copy the origin data
+                        can.can_data[0] = (uint8_t)flash_write_info.temp_32bit_data ;
+                        can.can_data[1] = (uint8_t)(flash_write_info.temp_32bit_data >>8);
+                        can.can_data[2] = (uint8_t)(flash_write_info.temp_32bit_data >>16);
+                        can.can_data[3] = (uint8_t)(flash_write_info.temp_32bit_data >>24);
                         send_serial_data(&can); // send the page starting address
+                        memset(page_byte_byff, 0, MAX_FLASH_PAGE_SIZE_IN_BYTE);
+                        flash_write_info.page_byte_counter = 0;
+                        flash_write_info.flash_write_seq = 0;
                         app.state = SERIAL_CAN_READ;
                     break;
                     
                     case CAN_SEND_START_LIN_ADDR:
                     break;
                     
+                    case CAN_SEND_DATA_WRITE_READY:
+                            can.can_id = CAN_SEND_DATA_WRITE_READY;
+                            can.len = 1;
+                            can.can_data[0] = 1; // ready for accept
+                            send_serial_data(&can);
+                            app.state = SERIAL_CAN_READ;
+                    break;
                     
+                    case CAN_SEND_FLASH_DATA:
+                        if( (can.can_data[0] - flash_write_info.flash_write_seq) == 1 ){  // next seq receive
+                            flash_write_info.flash_write_seq = can.can_data[0];
+                            for (i=1;i<5;i++){
+                                page_byte_byff[flash_write_info.page_byte_counter++] = can.can_data[i];   
+                            }
+                            can.can_id = CAN_SEND_FLASH_DATA;
+                            can.len = 1;
+                            can.can_data[0] = 1; // positive feedback
+                            send_serial_data(&can);
+                            app.state = SERIAL_CAN_READ;
+                        } else { // wrong seq so give negative ack
+                            can.can_id = CAN_SEND_FLASH_DATA;
+                            can.len = 1;
+                            can.can_data[0] = 0;
+                            send_serial_data(&can);
+                            app.state = SERIAL_CAN_READ;
+                        }
+                    break;
                     
+                    case CAN_SEND_PAGE_COMPLETE: // one page complete so write to flash and give ack
+                        if( can.can_data[0] == 1){
+                            write_array_data_to_flash(page_byte_byff , &page_size , &flash_write_info.curr_page_addr);
+                            delay_ms(500);
+                            flash_write_check_flag = check_flash_data_array(page_byte_byff  , &page_size , &flash_write_info.curr_page_addr);
+                            
+                            can.can_data[0] = flash_write_check_flag;
+                            
+                            if(flash_write_check_flag){
+                                flash_write_info.curr_page_addr = flash_write_info.curr_page_addr + page_size;
+                                can.can_id = CAN_SEND_PAGE_COMPLETE;
+                                can.len = 1;
+                            } else {
+                                can.can_id = CAN_SENT_FLASH_WRITE_ERROR;
+                                can.len = 1;
+                            }
+                            
+                            flash_write_info.temp_32bit_data = flash_write_info.curr_page_addr; // copy the origin data
+                            can.can_data[1] = (uint8_t)flash_write_info.temp_32bit_data ;
+                            can.can_data[2] = (uint8_t)(flash_write_info.temp_32bit_data >>8);
+                            can.can_data[3] = (uint8_t)(flash_write_info.temp_32bit_data >>16);
+                            can.can_data[4] = (uint8_t)(flash_write_info.temp_32bit_data >>24);
+                            send_serial_data(&can);
+                            /*Update the variables for next page data */
+                            flash_write_info.flash_write_seq = 0;
+                            
+                            flash_write_info.page_byte_counter = 0;
+                            memset(page_byte_byff, 0, MAX_FLASH_PAGE_SIZE_IN_BYTE);
+                            
+                            
+                            
+                            
+                            
+                            app.state = SERIAL_CAN_READ;
+                        } else {
+                            can.can_id = CAN_SEND_PAGE_COMPLETE;
+                            can.len = 1;
+                            can.can_data[0] = 0;
+                            send_serial_data(&can);
+                            app.state = SERIAL_CAN_READ;
+                        }
+                        
+                    break;
                     
+                    case CAN_SEND_EOF_MCU_RESET:
+                            can.can_id = CAN_SEND_EOF_MCU_RESET;
+                            can.len = 1;
+                            can.can_data[0] = 1;
+                            send_serial_data(&can);
+                            app.state = SERIAL_CAN_READ;
+                    break;
                     
                     default:
                         // Wrong ID so read again for next id
@@ -286,13 +355,17 @@ int check_flash_data_array(uint8_t * data , int * length , int * abs_adress)
     
     uint8_t temp_data[MAX_FLASH_PAGE_SIZE_IN_BYTE];
     flash_read(&FLASH_0, *abs_adress, temp_data, *length);
-    uint8_t compare = strcmp(data , temp_data);
-    
+    int i;
+    for(i=0;i< *length;i++){
+        if(temp_data[i] != data[i]){
+            return 0;
+        }
+    }
     #if BOOTLOADER_EVENT_PRINT_ENABLE
-        printf("DRV: Flash write check! strcmp->%d!\n\r",compare);
+        printf("DRV: Flash write check! success");
     #endif
-
-    return compare ? 0 : 1; // Compare the data byte by byte if same then strcmp'll give 0
+    return 1;
+    
 }
 //------------------------------------------------------------------------------------
 void read_serial_data(can_data_type * can , app_state_machine_type * app)
