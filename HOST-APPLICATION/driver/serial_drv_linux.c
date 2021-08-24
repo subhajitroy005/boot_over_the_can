@@ -71,7 +71,7 @@ void read_serial_string(uint8_t * buffer)
         while(len<=MAX_INCOMMING_STRING_LENGTH){
                 read(serial_io, temp_char_buffer, 1);
                 if(temp_char_buffer[0] == 't'){	// If the character is t reset all the values and start sampling the frame
-			buffer[0] = 't';				   
+                        int len = 0;				   
 		} else if((temp_char_buffer[0] == '\n') || (temp_char_buffer[0] == '\r')) {	// If \r received then stop sampling character and start process the frame. 
 			break; // break before the full stirng received
 		} else {

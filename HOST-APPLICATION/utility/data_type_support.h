@@ -47,11 +47,9 @@ enum machine_states_declaration{
 	READ_SERIAL_CAN_DATA,
 	DECODE_CAN_DATA,
 	DECODE_HEX_FILE,
+	RESET_MCU,
 	APP_EXIT
 };
-
-
-
 
 /*
 *_______________________________________________________
@@ -90,6 +88,15 @@ typedef struct _can_context //
 		Flash write related
 _______________________________________________________
 */
+typedef struct _each_hex_line_info{
+	uint8_t data[200];	// contains the data field
+	int 	data_len;	// Data length
+	uint32_t data_start_adress;	// MCU write start adress
+	int	data_type;     // Type of data []
+	uint8_t whole_line_temp_buff[200]; // temp buffer for read a line form queue
+}each_hex_line_info_type;
+
+
 typedef struct flash_wr_info{
 	uint32_t curr_page_addr;
 	uint32_t last_sent_ext_lin_addr;
@@ -104,15 +111,23 @@ typedef struct flash_wr_info{
 	uint32_t byte_seq_counter;
 	uint8_t first_time_data_sent;
 	uint8_t first_time_data_read; // if no extend linerar adress send to mcu first time
-
+	uint8_t last_page_sent;
 
 	/* Temp data buffers*/
 	 uint8_t temp_ext_lin_addr_buff[4]; // temp for string conv
 	 uint32_t temp_ext_lin_addr; // temp for doing the bit shifting
 	 uint8_t temp_data_conv_buff[2]; // temp hold the flash data hex for convert into decimal data
 }flash_wr_info_type;
-
-
+/*
+*______________________________________________________
+		enums for communication standard
+_______________________________________________________
+*/
+enum com_standard{
+	CAN_TXN_ERROR = 0,
+	CAN_TXN_QUERY,
+	CAN_TXN_ACK
+};
 
 
 
