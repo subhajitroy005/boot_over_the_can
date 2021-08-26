@@ -5,6 +5,7 @@
 #include <utility_support.h>
 #include <file_handling_support.h>
 #include <can_driver.h>  // For can related support
+#include <can_message_id.h>
 #include <time_drv_linux.h>
 #include <config.h>
 #include <data_type_support.h>
@@ -120,7 +121,7 @@ int main()
                                 read_file_to_queue(global_hex_file_name , &hex_line_q); // Read all the file 
 
                                 // Next state
-                                app.state = ASK_PAGE_SIZE;
+                                app.state = START_BOOT_FLASH_WRITE;
                         break;
 
 
@@ -133,12 +134,12 @@ int main()
                         *                       of MCU.
                         *********************************************************
                         */
-                        case ASK_PAGE_SIZE:
-                                can_rw.can_id = CAN_ASK_PAGE_SIZE;
+                        case START_BOOT_FLASH_WRITE:
+                                can_rw.can_id = CAN_START_FLASH_WRITE;
                                 can_rw.can_data[0] = CAN_TXN_QUERY; // send a query
                                 can_rw.len = 1;
                                 can_write(&can_rw);
-                                printf("Pagesize Asked------------!\n\r");
+                                printf("Boot flash write requested !\n\r");
 
                                 // Next state
                                 app.state = READ_SERIAL_CAN_DATA;
@@ -283,7 +284,12 @@ int main()
 void decode_incomming_can_data(const can_context_type * can ,type_machine_state * app)
 {
         switch(can->can_id){
-
+                /*
+                * If it is a reply of boot flash write
+                */
+                case CAN_START_FLASH_WRITE:
+                     printf("hlelo");   
+                break;
 
                 default:
                         printf("ERROR: CAN Message ID Not listed!%x\n\r",can->can_id);

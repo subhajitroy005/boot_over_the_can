@@ -43,7 +43,7 @@ enum machine_states_declaration{
 	READ_FILE,
 	WAIT_FOR_REPLY,
 	FLASH_WRITE,
-	ASK_PAGE_SIZE,
+	START_BOOT_FLASH_WRITE,
 	READ_SERIAL_CAN_DATA,
 	DECODE_CAN_DATA,
 	DECODE_HEX_FILE,
@@ -118,16 +118,7 @@ typedef struct flash_wr_info{
 	 uint32_t temp_ext_lin_addr; // temp for doing the bit shifting
 	 uint8_t temp_data_conv_buff[2]; // temp hold the flash data hex for convert into decimal data
 }flash_wr_info_type;
-/*
-*______________________________________________________
-		enums for communication standard
-_______________________________________________________
-*/
-enum com_standard{
-	CAN_TXN_ERROR = 0,
-	CAN_TXN_QUERY,
-	CAN_TXN_ACK
-};
+
 
 
 
