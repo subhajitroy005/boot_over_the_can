@@ -98,25 +98,14 @@ typedef struct _each_hex_line_info{
 
 
 typedef struct flash_wr_info{
-	uint32_t curr_page_addr;
-	uint32_t last_sent_ext_lin_addr;
-	uint32_t wr_success_page_counter;
-	uint32_t write_page_byte_counter; 
-	uint32_t curr_mcu_page_adress;
-	
-	/* Flash data tracking related info */
-	uint32_t byte_track_in_line; // track the number of bytes in line
-	uint32_t page_byte_counter;
-	uint8_t mcu_data_accept_ready;
-	uint32_t byte_seq_counter;
-	uint8_t first_time_data_sent;
-	uint8_t first_time_data_read; // if no extend linerar adress send to mcu first time
-	uint8_t last_page_sent;
+	/*addres  related data*/
+	uint32_t curr_mcu_mem_addr;
+	uint32_t curr_hex_line_adress;
 
-	/* Temp data buffers*/
-	 uint8_t temp_ext_lin_addr_buff[4]; // temp for string conv
-	 uint32_t temp_ext_lin_addr; // temp for doing the bit shifting
-	 uint8_t temp_data_conv_buff[2]; // temp hold the flash data hex for convert into decimal data
+	/*Temp data containers*/
+	uint32_t  bit32_data;
+	uint8_t   bit8_data;
+
 }flash_wr_info_type;
 
 

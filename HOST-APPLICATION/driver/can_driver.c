@@ -121,9 +121,11 @@ void can_write(const can_context_type * can)
 	int serial_data_len = (6+(i*2));
 	/* Send string to to Serial */
         uint8_t * uint8_data = (uint8_t *)uart_tx_frame_buff;
+
         #if OUTGOING_CAN_SERIAL_PRINT
-        printf("CAN: Serial->%s\n\r",uart_tx_frame_buff);
+                printf("CAN: Serial->%s\n\r",uart_tx_frame_buff);
         #endif
+
         write_serial_string(uart_tx_frame_buff);                    
 }
 
@@ -138,8 +140,9 @@ void can_read(can_context_type * can)
 
         //read_serial_string(buffer , &len);
         read_serial_string(buffer);
-        #if INCOMMING_CAN_SERIAL_PRINT
-                printf("CAN_DRIVER: Incomming data->%s\n\r", buffer);
+
+        #if INCOMMING_SERIAL_DRIVER_PRINT
+                printf("SERIAL_DRIVER: Incomming data->%s\n\r", buffer);
         #endif
 
         int i =0;
@@ -147,15 +150,17 @@ void can_read(can_context_type * can)
 	        serial_recv_can_id_temp[i] = buffer[i];
 	}
         serial_can_tx_id = hexadecimalToDecimal(serial_recv_can_id_temp);
-        #if INCOMMING_CAN_SERIAL_PRINT
+
+        #if INCOMMING_CAN_DRIVER_PRINT
         printf("Segmented ID: %s\n\r",serial_recv_can_id_temp);
-        #endif     
+        #endif
+             
         can->can_id = serial_can_tx_id;
 			
 	// Copy the len from the data bytes and convert it to actual values
 	serial_recv_can_len[0] = buffer[3];
 	serial_can_tx_len = hexadecimalToDecimal(serial_recv_can_len);
-        #if INCOMMING_CAN_SERIAL_PRINT
+        #if INCOMMING_CAN_DRIVER_PRINT
         printf("Segmented LEN: %d\n\r",serial_can_tx_len);
         #endif
         can->len = serial_can_tx_len;
@@ -168,16 +173,16 @@ void can_read(can_context_type * can)
 		can_tx_data[1] = buffer[i+1];
 		serial_can_data[index++] = hexadecimalToDecimal(can_tx_data);
 	}
-        #if INCOMMING_CAN_SERIAL_PRINT
+        #if INCOMMING_CAN_DRIVER_PRINT
                 printf("Segmented data: ");
         #endif
         for(int i= 0 ; i<8 ; i++ ){
-                #if INCOMMING_CAN_SERIAL_PRINT
+                #if INCOMMING_CAN_DRIVER_PRINT
                         printf("-%d-",serial_can_data[i]);
                 #endif
                 can->can_data[i] = serial_can_data[i];
         }
-        #if INCOMMING_CAN_SERIAL_PRINT
+        #if INCOMMING_CAN_DRIVER_PRINT
         printf("\n\r");
         #endif
         

@@ -55,12 +55,16 @@ void config_serial_port(char* port_name)
 
 void write_serial_string(char* string_data)
 {       
+        #if OUTGOING_SERIAL_DRIVER_PRINT
+                printf("SERIAL Driver: write: :%s: len->:%d:\n\r",string_data, strlen(string_data));
+        #endif
         int data_written = write(serial_io, string_data, strlen(string_data));
         if(data_written != strlen(string_data)){
                 printf("Alert! Serial write err: Data not transmitted completely\n\r");
+                exit(EXIT_FAILURE);
         } else {
-                #if OUTGOING_CAN_SERIAL_PRINT
-                        printf("Serial write: -%s-",string_data );
+                #if OUTGOING_SERIAL_DRIVER_PRINT
+                        printf("SERIAL Driver: write success!\n\r");
                 #endif
         }
 }
@@ -68,6 +72,11 @@ void write_serial_string(char* string_data)
 void read_serial_string(uint8_t * buffer)
 {       int len = 0;
         uint8_t temp_char_buffer[1];
+
+        #if INCOMMING_SERIAL_DRIVER_PRINT
+                printf("SERIAL Driver: Raw data character:  ");
+        #endif
+
         while(len<=MAX_INCOMMING_STRING_LENGTH){
                 read(serial_io, temp_char_buffer, 1);
                 if(temp_char_buffer[0] == 't'){	// If the character is t reset all the values and start sampling the frame
@@ -76,6 +85,13 @@ void read_serial_string(uint8_t * buffer)
 			break; // break before the full stirng received
 		} else {
 	                buffer[len++] = temp_char_buffer[0]; // Fill the buffer character by character
-	        }
+                        #if INCOMMING_SERIAL_DRIVER_PRINT
+                                printf(" %c",temp_char_buffer[0]);
+                        #endif        
+	        }     
         }
+
+        #if INCOMMING_SERIAL_DRIVER_PRINT
+                printf("\n\r");
+        #endif
 }

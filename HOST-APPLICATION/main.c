@@ -48,23 +48,15 @@ int mcu_pagesize = 0;
 /* Function Prototype ______________________________________________________________*/
 void each_hex_line_operation(each_hex_line_info_type * each_hex_line_buff);
 void read_file_to_queue(char * file_name , queue* q);
-void decode_incomming_can_data(const can_context_type * can ,type_machine_state * app);
+void decode_incomming_can_data(can_context_type * can ,type_machine_state * app);
 
 
 /* MAIN ____________________________________________________________________________*/
 int main()
 {       
         can_rw.can_serial_port = portname;
-
-        flash_wr_info.byte_seq_counter = 0;
-        flash_wr_info.byte_track_in_line = 0; 
-        flash_wr_info.wr_success_page_counter = 0;
-        flash_wr_info.mcu_data_accept_ready = 0;
-        flash_wr_info.first_time_data_sent = 0;
-        flash_wr_info.first_time_data_read = 1;
-        flash_wr_info.write_page_byte_counter = 0;
-        flash_wr_info.last_page_sent = 0;
-
+        flash_wr_info.curr_hex_line_adress = 0;
+        flash_wr_info.curr_mcu_mem_addr = 0;
 
 
 
@@ -281,14 +273,22 @@ int main()
 * return:
 ################################################
 */
-void decode_incomming_can_data(const can_context_type * can ,type_machine_state * app)
+void decode_incomming_can_data(can_context_type * can  , type_machine_state * app)
 {
         switch(can->can_id){
                 /*
                 * If it is a reply of boot flash write
                 */
                 case CAN_START_FLASH_WRITE:
-                     printf("hlelo");   
+                        printf("Page Size:      %d\n\r",can->can_data[0]);
+                        flash_wr_info.bit32_data = can->can_data[2];
+                        flash_wr_info.bit32_data = (flash_wr_info.bit32_data << 8);
+                        flash_wr_info.bit32_data &= 0xFF00;
+                        flash_wr_info.bit32_data |= can->can_data[1];
+                        flash_wr_info.curr_mcu_mem_addr  =  flash_wr_info.bit32_data;
+                        printf("MCU Base adress: 0x%x\n\r",flash_wr_info.curr_mcu_mem_addr);
+
+                        app->state = APP_EXIT;   
                 break;
 
                 default:
