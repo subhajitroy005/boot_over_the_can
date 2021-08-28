@@ -10,13 +10,7 @@
 /*
 Serial Interface related________________________________
 */
-#include <errno.h>
-#include <fcntl.h> 
-#include <string.h>
-#include <termios.h>
-#include <unistd.h>
 
-#include <time.h>
 
 #define CAN 1
 #define USB 2

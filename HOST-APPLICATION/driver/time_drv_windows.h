@@ -3,9 +3,9 @@
 
 #include <data_type_support.h>
 #include <config.h>
-#include <time.h>
 
-clock_t millis(void);
+
+int millis(void);
 
 
 

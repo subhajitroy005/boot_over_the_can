@@ -3,11 +3,6 @@
 
 #include <data_type_support.h>
 #include <config.h>
-#include <errno.h>
-#include <fcntl.h> 
-#include <string.h>
-#include <termios.h>
-#include <unistd.h>
 
 
 /**
