@@ -4,7 +4,7 @@
 
 CC = gcc
 LINUX_DEBUG_FILE_DIR = debug_files/x86_linux_deb
-WINDOWS_DEBUG_FILE_DIR = debug_files/x86_windows_deb
+WINDOWS_DEBUG_FILE_DIR = debug_files\x86_windows_deb
 ###### Debug line flag ##############
 DEBUG_FLAGS = 
 
@@ -27,8 +27,10 @@ ifeq ($(OS),Windows)
 	EXE_TYPE_SUFFIX = exe
 
 # SHELL related var
-	REMOVE = del
-	REMOVE_FLAG = /S
+	REMOVE_FILE = del
+	REMOVE_FOLDER = rd
+	REMOVE_FILE_FLAG = /S
+	REMOVE_FOLDER_FLAG = /s /q
 
 endif
 
