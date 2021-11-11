@@ -41,7 +41,7 @@ ${WINDOWS_DEBUG_FILE_DIR}/time_drv_windows.o: driver/time_drv_windows.c
 
 ${WINDOWS_DEBUG_FILE_DIR}/can_driver.o: driver/can_driver.c
 	@echo "Compiling:  $< "
-	$(CC) $(DEBUG_FLAGS) $(INC_PATH_FLAG) -o $@ -c $<
+	$(CC) -D WINDOWS $(DEBUG_FLAGS) $(INC_PATH_FLAG) -o $@ -c $<
 
 ###################    Utility related recipies #################
 ${WINDOWS_DEBUG_FILE_DIR}/utility_support.o: utility/utility_support.c

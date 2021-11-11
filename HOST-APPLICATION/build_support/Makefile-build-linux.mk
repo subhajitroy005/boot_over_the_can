@@ -40,7 +40,7 @@ ${LINUX_DEBUG_FILE_DIR}/time_drv_linux.o: driver/time_drv_linux.c
 
 ${LINUX_DEBUG_FILE_DIR}/can_driver.o: driver/can_driver.c
 	@echo -e "\e[1;31m Compiling $< \e[0m"
-	$(CC) $(DEBUG_FLAGS) -DLINUX $(INC_PATH_FLAG) -o $@ -c $<
+	$(CC) -D LINUX $(DEBUG_FLAGS) -DLINUX $(INC_PATH_FLAG) -o $@ -c $<
 
 ###################    Utility related recipies #################
 ${LINUX_DEBUG_FILE_DIR}/utility_support.o: utility/utility_support.c

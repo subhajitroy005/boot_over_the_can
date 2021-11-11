@@ -23,8 +23,9 @@ each_hex_line_info_type each_hex_line_buff;     // Hold the info from each hex l
 
 
 //--------------- Individual data filed buffer _
-char *portname = "/dev/ttyACM0";
-char* global_hex_file_name = "blink.hex";
+//char *portname = "/dev/ttyACM0"; // For linux 
+char *portname = "COM5"; // For windows
+char* global_hex_file_name = "abc.hex";
 
 
 
@@ -77,6 +78,13 @@ int main()
                         */
                         case INIT:
                                 /*
+                                * Print the heading of the application
+                                * eg: name and version no
+                                */
+                                printf("-------------------\n");
+                                printf("Over Ther CAN V 1.0\n");
+                                printf("-------------------\n\r");
+                                /*
                                 * Init the can communication through the serial
                                 */
                                 can_init(&can_rw);
@@ -85,14 +93,8 @@ int main()
                                 */
                                 queue_init(&hex_line_q);
                                 
-                                /*
-                                * Print the heading of the application
-                                * eg: name and version no
-                                */
-                                printf("***** Over Ther CAN ******\n\rV 1.0\n\r");
-
                                 // Next state
-                                app.state = READ_FILE;
+                                app.state = READ_SERIAL_CAN_DATA;
                         break;
 
                         /*
@@ -149,7 +151,7 @@ int main()
                                can_read(&can_rw); //  Read the data from serial || Blocking in this method
 
                                // Next state
-                               app.state = DECODE_CAN_DATA;
+                               app.state = READ_SERIAL_CAN_DATA;
                         break;
                         
                         /*
@@ -184,9 +186,6 @@ int main()
                                         memset(each_hex_line_buff.data, 
                                                 0, 
                                                 strlen(each_hex_line_buff.data));
-                                        memset(each_hex_line_buff.data_start_adress, 
-                                                0, 
-                                                strlen(each_hex_line_buff.data_start_adress));
                                         
                                         /* Peek a whole line from hex line queue */
                                         peek(&hex_line_q ,each_hex_line_buff.whole_line_temp_buff);

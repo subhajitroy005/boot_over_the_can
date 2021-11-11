@@ -3,13 +3,15 @@
 
 #include <data_type_support.h>
 #include <config.h>
+#include <utility_support.h>
 
-#ifdef LINUX // From the compiler line {for linux inclusion}
+#if LINUX // From the compiler line {for linux inclusion}
         #include <serial_drv_linux.h>
 #endif
 
 #if WINDOWS // From the compiler line {for linux inclusion}
         #include <serial_drv_windows.h>
+        
 #endif
 
 

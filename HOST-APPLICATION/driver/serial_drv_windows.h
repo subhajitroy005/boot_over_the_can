@@ -3,6 +3,10 @@
 
 #include <data_type_support.h>
 #include <config.h>
+/* Windows related variables */
+#include	<windows.h>
+#include	<commdlg.h>
+
 
 
 /**

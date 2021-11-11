@@ -29,10 +29,11 @@ void can_init(const can_context_type * can)
         #if SERIAL_IGNORE
                 printf("Serial Port init ignore\n\r");
         #else
-                printf("Configuring CAN Serial PORT->   %s\n\r", can->can_serial_port);
+                printf("Configuring CAN Serial PORT-> %s\n\r", can->can_serial_port);
                 config_serial_port(can->can_serial_port); // If the seril init not enabled in debug
         #endif
 }
+
 
 void can_write(const can_context_type * can)
 {
@@ -122,8 +123,8 @@ void can_write(const can_context_type * can)
 	/* Send string to to Serial */
         uint8_t * uint8_data = (uint8_t *)uart_tx_frame_buff;
 
-        #if OUTGOING_CAN_SERIAL_PRINT
-                printf("CAN: Serial->%s\n\r",uart_tx_frame_buff);
+        #if OUTGOING_CAN_DRIVER_PRINT
+                printf("[CAN DRV] Write :%s:\n\r",uart_tx_frame_buff);
         #endif
 
         write_serial_string(uart_tx_frame_buff);                    
@@ -138,11 +139,14 @@ void can_read(can_context_type * can)
         memset(serial_recv_can_len ,0 ,1);
         memset(can_tx_data ,0 ,8);
 
-        //read_serial_string(buffer , &len);
+        #if INCOMMING_CAN_DRIVER_PRINT
+                printf("[CAN DRV] Serial req!\n\r");
+        #endif
+
         read_serial_string(buffer);
 
-        #if INCOMMING_SERIAL_DRIVER_PRINT
-                printf("SERIAL_DRIVER: Incomming data->%s\n\r", buffer);
+        #if INCOMMING_CAN_DRIVER_PRINT
+                printf("[CAN DRV] Read %s\n\r", buffer);
         #endif
 
         int i =0;
@@ -152,7 +156,7 @@ void can_read(can_context_type * can)
         serial_can_tx_id = hexadecimalToDecimal(serial_recv_can_id_temp);
 
         #if INCOMMING_CAN_DRIVER_PRINT
-        printf("Segmented ID: %s\n\r",serial_recv_can_id_temp);
+        printf("[CAN DRV] Segmented ID: %s\n\r",serial_recv_can_id_temp);
         #endif
              
         can->can_id = serial_can_tx_id;
@@ -160,9 +164,11 @@ void can_read(can_context_type * can)
 	// Copy the len from the data bytes and convert it to actual values
 	serial_recv_can_len[0] = buffer[3];
 	serial_can_tx_len = hexadecimalToDecimal(serial_recv_can_len);
+
         #if INCOMMING_CAN_DRIVER_PRINT
-        printf("Segmented LEN: %d\n\r",serial_can_tx_len);
+        printf("[CAN DRV] Segmented LEN: %d\n\r",serial_can_tx_len);
         #endif
+
         can->len = serial_can_tx_len;
 
         //printf("can len str %s\n\r",serial_recv_can_id_temp);
@@ -174,14 +180,18 @@ void can_read(can_context_type * can)
 		serial_can_data[index++] = hexadecimalToDecimal(can_tx_data);
 	}
         #if INCOMMING_CAN_DRIVER_PRINT
-                printf("Segmented data: ");
+                printf("[CAN DRV] Segmented data: ");
         #endif
+
         for(int i= 0 ; i<8 ; i++ ){
+
                 #if INCOMMING_CAN_DRIVER_PRINT
                         printf("-%d-",serial_can_data[i]);
                 #endif
+
                 can->can_data[i] = serial_can_data[i];
         }
+
         #if INCOMMING_CAN_DRIVER_PRINT
         printf("\n\r");
         #endif

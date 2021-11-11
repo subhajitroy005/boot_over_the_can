@@ -6,7 +6,11 @@
 #define SERIAL_READ_BAUD                B115200
 #define SERIAL_WRITE_BAUD               B115200
 #define SERIAL_READ_TIMEOUT             5    //*100ms
-#define MAX_INCOMMING_STRING_LENGTH     30
+#define MAX_INCOMMING_STRING_LENGTH     100
+#define MAX_OUTGOING_STRING_LENGTH      100
+#define SERIAL_START_CHAR               't'
+#define SERIAL_TERM_CHAR                '\n'
+
 
 /*
 * HEX file related definition

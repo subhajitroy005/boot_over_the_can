@@ -215,13 +215,14 @@ int main(void)
     app.can_data_available = 0; 
 	while (1) {
         /*Read the serial data through can */
-        read_serial_data();
+        //read_serial_data();
         /* If the data is available */
-        if(app.can_data_available){
-            app.can_data_available = 0;
-            decode_can_data();
-        }
-      
+        //if(app.can_data_available){
+          //  app.can_data_available = 0;
+          //  decode_can_data();
+       // }
+	printf("t001212AB\r");
+	delay_ms(1000);
 	}
 }
 /*
