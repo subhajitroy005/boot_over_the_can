@@ -341,6 +341,7 @@
       <Value>../hri</Value>
       <Value>../stdio_redirect</Value>
       <Value>%24(PackRepoDir)\atmel\SAMC21_DFP\1.2.176\samc21n\include</Value>
+      <Value>../OTC_Sources</Value>
     </ListValues>
   </armgcc.compiler.directories.IncludePaths>
   <armgcc.compiler.optimization.level>Optimize debugging experience (-Og)</armgcc.compiler.optimization.level>
@@ -359,6 +360,7 @@
     </ListValues>
   </armgcc.linker.libraries.LibrarySearchPaths>
   <armgcc.linker.optimization.GarbageCollectUnusedSections>True</armgcc.linker.optimization.GarbageCollectUnusedSections>
+  <armgcc.linker.memorysettings.ExternalRAM />
   <armgcc.linker.miscellaneous.LinkerFlags>-Tsamc21n18a_flash.ld</armgcc.linker.miscellaneous.LinkerFlags>
   <armgcc.assembler.general.IncludePaths>
     <ListValues>
@@ -824,6 +826,30 @@
     <Compile Include="main.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="OTC_Sources\can_driver.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="OTC_Sources\can_driver.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="OTC_Sources\config.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="OTC_Sources\data_type_support.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="OTC_Sources\debug_macros.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="OTC_Sources\message_id.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="OTC_Sources\utility_support.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="OTC_Sources\utility_support.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="stdio_redirect\gcc\read.c">
       <SubType>compile</SubType>
     </Compile>
@@ -840,9 +866,6 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="stdio_start.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="utility_support.h">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>
@@ -872,6 +895,7 @@
     <Folder Include="hpl\port\" />
     <Folder Include="hpl\sercom\" />
     <Folder Include="hri\" />
+    <Folder Include="OTC_Sources\" />
     <Folder Include="stdio_redirect\" />
     <Folder Include="stdio_redirect\gcc\" />
   </ItemGroup>

@@ -30,7 +30,7 @@
 */
 //------------    Driver --------------------------------------
 #define SERIAL_IGNORE                                   0
-#define INCOMMING_SERIAL_DRIVER_PRINT                   1
+#define INCOMMING_SERIAL_DRIVER_PRINT                   0
 #define OUTGOING_SERIAL_DRIVER_PRINT                    1
 #define INCOMMING_CAN_DRIVER_PRINT                      1
 #define OUTGOING_CAN_DRIVER_PRINT                       1

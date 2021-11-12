@@ -1,14 +1,10 @@
 /*
- * utility_support.h
+ * utility_support.c
  *
- * Created: 11/13/2020 1:52:36 AM
- *  Author: subha
+ * Created: 12-11-2021 19:56:28
+ *  Author: subhajitr
  */ 
-
-
-#ifndef UTILITY_SUPPORT_H_
-#define UTILITY_SUPPORT_H_
-
+#include "utility_support.h"
 
 
 
@@ -66,6 +62,3 @@ void decToHexa(int64_t n , uint8_t hex_val[] , uint8_t * len)
 	
 	*len = i;
 }
-
-
-#endif /* UTILITY_SUPPORT_H_ */

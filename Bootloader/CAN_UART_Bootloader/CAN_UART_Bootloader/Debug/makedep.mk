@@ -64,6 +64,10 @@ hpl\sercom\hpl_sercom.c
 
 main.c
 
+OTC_Sources\can_driver.c
+
+OTC_Sources\utility_support.c
+
 stdio_redirect\gcc\read.c
 
 stdio_redirect\gcc\write.c

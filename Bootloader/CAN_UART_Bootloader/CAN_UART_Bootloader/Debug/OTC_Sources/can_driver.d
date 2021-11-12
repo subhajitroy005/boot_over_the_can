@@ -1,4 +1,5 @@
-main.d main.o: .././main.c ../OTC_Sources/utility_support.h \
+OTC_Sources/can_driver.d OTC_Sources/can_driver.o: \
+ ../OTC_Sources/can_driver.c ../OTC_Sources/can_driver.h \
  ../OTC_Sources/data_type_support.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\lib\gcc\arm-none-eabi\6.3.1\include\stdint.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-none-eabi\include\stdint.h \
@@ -35,7 +36,7 @@ main.d main.o: .././main.c ../OTC_Sources/utility_support.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-none-eabi\include\machine\types.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-none-eabi\include\sys\stdio.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-none-eabi\include\ctype.h \
- ../OTC_Sources/can_driver.h ../OTC_Sources/debug_macros.h \
+ ../OTC_Sources/utility_support.h ../OTC_Sources/debug_macros.h \
  ../atmel_start.h ../driver_init.h ../atmel_start_pins.h \
  ../hal/include/hal_gpio.h ../hal/include/hpl_gpio.h \
  ../hal/utils/include/compiler.h \
@@ -155,10 +156,9 @@ main.d main.o: .././main.c ../OTC_Sources/utility_support.h \
  ../hal/include/hpl_usart_sync.h ../hal/include/hpl_usart.h \
  ../hal/include/hal_can_async.h ../hal/include/hpl_can.h \
  ../hal/include/hpl_can_async.h ../hal/utils/include/utils.h \
- ../stdio_start.h ../stdio_redirect/stdio_io.h ../OTC_Sources/config.h \
- ../OTC_Sources/message_id.h
+ ../stdio_start.h ../stdio_redirect/stdio_io.h ../OTC_Sources/config.h
 
-../OTC_Sources/utility_support.h:
+../OTC_Sources/can_driver.h:
 
 ../OTC_Sources/data_type_support.h:
 
@@ -232,7 +232,7 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-no
 
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-none-eabi\include\ctype.h:
 
-../OTC_Sources/can_driver.h:
+../OTC_Sources/utility_support.h:
 
 ../OTC_Sources/debug_macros.h:
 
@@ -553,5 +553,3 @@ C:\Program\ Files\ (x86)\Atmel\Studio\7.0\Packs\atmel\SAMC21_DFP\1.2.176\samc21n
 ../stdio_redirect/stdio_io.h:
 
 ../OTC_Sources/config.h:
-
-../OTC_Sources/message_id.h:

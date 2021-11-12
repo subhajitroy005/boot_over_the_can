@@ -94,7 +94,7 @@ int main()
                                 queue_init(&hex_line_q);
                                 
                                 // Next state
-                                app.state = READ_SERIAL_CAN_DATA;
+                                app.state = START_BOOT_FLASH_WRITE;
                         break;
 
                         /*
@@ -151,7 +151,7 @@ int main()
                                can_read(&can_rw); //  Read the data from serial || Blocking in this method
 
                                // Next state
-                               app.state = READ_SERIAL_CAN_DATA;
+                               app.state = DECODE_CAN_DATA;
                         break;
                         
                         /*

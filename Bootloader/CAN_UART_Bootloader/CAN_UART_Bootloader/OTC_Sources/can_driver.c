@@ -1,5 +1,12 @@
 #include "can_driver.h"
 
+/* ASF 4 driver related macros */
+
+
+
+struct io_descriptor * serial_io;	// Instance for USART LabVIEW serial
+
+
 
 uint8_t buffer[MAX_INCOMMING_STRING_LENGTH];
 uint8_t serial_recv_can_id_temp[3] = {};
@@ -10,35 +17,45 @@ uint8_t serial_can_data[8] = {};
 uint8_t can_tx_data[8] = {}; // store temp hex data from can
 
 
-
-
- uint8_t temp_buff[3] = {0, 0 ,0};
+uint8_t temp_buff[3] = {0, 0 ,0};
 uint8_t temp_copy_buffer[3] = {};
- uint8_t temp_buff_data[2] = {};
+uint8_t temp_buff_data[2] = {};
 uint8_t	uart_tx_frame_buff[23]= {};
 
 
 
-
-
+uint8_t temp_char_buff[1] = {0};
+uint8_t frame_received = 0;
+uint8_t rx_buffer[MAX_INCOMMING_STRING_LENGTH] = {0};
+uint8_t rx_buff_index = 0;
 
 
 void can_init(const can_context_type * can)
 {
-        /*______ Serial section Init________*/
-        #if SERIAL_IGNORE
-                printf("Serial Port init ignore\n\r");
-        #else
-                printf("Configuring CAN Serial PORT-> %s\n", can->can_serial_port);
-                config_serial_port(can->can_serial_port); // If the seril init not enabled in debug
-        #endif
+       usart_sync_get_io_descriptor(&TARGET_IO, &serial_io);	// Get the descriptor
 }
 
 
 void can_write(const can_context_type * can)
 {
+	/*	--------------------------------------
+		Communication mode is CAN 
+		--------------------------------------
+	*/
+	#if (BOOT_MODE == CAN_MODE)
+	
+	
+	
+	
+	
+	
+	/*	--------------------------------------
+		Communication mode is USB Serial 
+		--------------------------------------
+	*/
+	#else 	
+	
         // Serial String Format tiiildddd..dd\n | max data is the byte
-       
         memset(uart_tx_frame_buff , 0 , 23);
         memset(temp_buff , 0 , 3);
         memset(temp_copy_buffer , 0 , 3);
@@ -127,73 +144,122 @@ void can_write(const can_context_type * can)
                 printf("[CAN DRV] Write :%s:\n",uart_tx_frame_buff);
         #endif
 
-        write_serial_string(uart_tx_frame_buff);                    
+	io_write(serial_io , uart_tx_frame_buff, serial_data_len); // Calculate based on the data len
+	
+	#endif                  
 }
 
-void can_read(can_context_type * can)
+int can_read(can_context_type * can)
 {
-        int len = 0;
-        memset(buffer , 0 , sizeof(buffer));
-        memset(serial_can_data ,0 ,8);
-        memset(serial_recv_can_id_temp ,0 ,3);
-        memset(serial_recv_can_len ,0 ,1);
-        memset(can_tx_data ,0 ,8);
+	/*	--------------------------------------
+		Communication mode is CAN 
+		--------------------------------------
+	*/
+	#if (BOOT_MODE == CAN_MODE)
+	
+	
+	
+	
+	
+	
+	/*	--------------------------------------
+		Communication mode is USB Serial 
+		--------------------------------------
+	*/
+	#else 
+	
+	/* Read characters */
+	if(usart_sync_is_rx_not_empty(&TARGET_IO)){ //
 
-        #if INCOMMING_CAN_DRIVER_PRINT
-                printf("[CAN DRV] Serial req!\n");
-        #endif
-
-        read_serial_string(buffer);
-
-        #if INCOMMING_CAN_DRIVER_PRINT
-                printf("[CAN DRV] Read %s\n", buffer);
-        #endif
-
-        int i =0;
-        for(i = 0 ; i<3 ; i++){
-	        serial_recv_can_id_temp[i] = buffer[i];
-	}
-        serial_can_tx_id = hexadecimalToDecimal(serial_recv_can_id_temp);
-
-        #if INCOMMING_CAN_DRIVER_PRINT
-        printf("[CAN DRV] Segmented ID: %s\n",serial_recv_can_id_temp);
-        #endif
-             
-        can->can_id = serial_can_tx_id;
+		io_read(serial_io, temp_char_buff , 1);
 			
-	// Copy the len from the data bytes and convert it to actual values
-	serial_recv_can_len[0] = buffer[3];
-	serial_can_tx_len = hexadecimalToDecimal(serial_recv_can_len);
-
-        #if INCOMMING_CAN_DRIVER_PRINT
-        printf("[CAN DRV] Segmented LEN: %d\n",serial_can_tx_len);
-        #endif
-
-        can->len = serial_can_tx_len;
-
-        //printf("can len str %s\n\r",serial_recv_can_id_temp);
-        //printf("Serial %d\n\r",serial_buff_size);
-	int index = 0;
-	for(i = 4 ; (i < (4 + (serial_can_tx_len*2)) ) ; i+=2){ // One byte means 2 character in serial
-	        can_tx_data[0] = buffer[i];
-		can_tx_data[1] = buffer[i+1];
-		serial_can_data[index++] = hexadecimalToDecimal(can_tx_data);
+		//printf(":%c-",temp_char_buff[0]);
+		if(temp_char_buff[0] == 't'){	// If the character is t reset all the values and start sampling the frame
+			rx_buff_index = 0; // Start the string	
+		} else if((temp_char_buff[0] == '\n')) {	// If \r received then stop sampling character and start process the frame.
+			frame_received = 1;
+		} else {
+			if(rx_buff_index < MAX_INCOMMING_STRING_LENGTH)
+				rx_buffer[rx_buff_index++] = temp_char_buff[0]; // Fill the buffer character by character
+		}	
 	}
-        #if INCOMMING_CAN_DRIVER_PRINT
-                printf("[CAN DRV] Segmented data: ");
-        #endif
+	
+	/*  One complete usb frame is received and process the frame */
+	if(frame_received){
+		frame_received = 0;
+		
+		int len = 0;
+		
+		memset(serial_can_data ,0 ,8);
+		memset(serial_recv_can_id_temp ,0 ,3);
+		memset(serial_recv_can_len ,0 ,1);
+		memset(can_tx_data ,0 ,8);
 
-        for(int i= 0 ; i<8 ; i++ ){
+		#if INCOMMING_CAN_DRIVER_PRINT
+		printf("[CAN DRV] Serial frame received !\n");
+		#endif
+		
 
-                #if INCOMMING_CAN_DRIVER_PRINT
-                        printf("-%d[0x%x]-",serial_can_data[i], serial_can_data[i]);
-                #endif
+		#if INCOMMING_CAN_DRIVER_PRINT
+		printf("[CAN DRV] Read %s\n", rx_buffer);
+		#endif
 
-                can->can_data[i] = serial_can_data[i];
-        }
+		int i =0;
+		for(i = 0 ; i<3 ; i++){
+			serial_recv_can_id_temp[i] = rx_buffer[i];
+		}
+		serial_can_tx_id = hexadecimalToDecimal(serial_recv_can_id_temp);
 
-        #if INCOMMING_CAN_DRIVER_PRINT
-        printf("\n");
-        #endif
-        
+		#if INCOMMING_CAN_DRIVER_PRINT
+		printf("[CAN DRV] Segmented ID: %s\n",serial_recv_can_id_temp);
+		#endif
+		
+		can->can_id = serial_can_tx_id;
+		
+		// Copy the len from the data bytes and convert it to actual values
+		serial_recv_can_len[0] = rx_buffer[3];
+		serial_can_tx_len = hexadecimalToDecimal(serial_recv_can_len);
+
+		#if INCOMMING_CAN_DRIVER_PRINT
+		printf("[CAN DRV] Segmented LEN: %d\n",serial_can_tx_len);
+		#endif
+
+		can->len = serial_can_tx_len;
+
+		//printf("can len str %s\n\r",serial_recv_can_id_temp);
+		//printf("Serial %d\n\r",serial_buff_size);
+		int index = 0;
+		for(i = 4 ; (i < (4 + (serial_can_tx_len*2)) ) ; i+=2){ // One byte means 2 character in serial
+			can_tx_data[0] = rx_buffer[i];
+			can_tx_data[1] = rx_buffer[i+1];
+			serial_can_data[index++] = hexadecimalToDecimal(can_tx_data);
+		}
+		#if INCOMMING_CAN_DRIVER_PRINT
+		printf("[CAN DRV] Segmented data: ");
+		#endif
+
+		for(int i= 0 ; i<8 ; i++ ){
+
+			#if INCOMMING_CAN_DRIVER_PRINT
+			printf("-%d[0x%x]-",serial_can_data[i], serial_can_data[i]);
+			#endif
+
+			can->can_data[i] = serial_can_data[i];
+		}
+
+		#if INCOMMING_CAN_DRIVER_PRINT
+		printf("\n");
+		#endif
+		
+		memset(rx_buffer,0,MAX_INCOMMING_STRING_LENGTH);
+		
+		
+		return 1;
+		
+		
+		
+	}
+	#endif
+	
+	return 0;       
 }

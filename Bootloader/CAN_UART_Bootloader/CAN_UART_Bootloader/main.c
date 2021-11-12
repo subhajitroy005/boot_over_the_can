@@ -1,35 +1,15 @@
-#include <atmel_start.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
-#include <ctype.h>
 #include <utility_support.h>
-
-#define CAN_MODE 1
-#define USB_MODE 0
-
-//*******************  Configuration of bootloader ********************
-#define BOOT_MODE USB_MODE // Select the boot mode
-
+#include <can_driver.h>
+#include <config.h>
+#include <debug_macros.h>
+#include <data_type_support.h>
+#include <message_id.h>
 
 
 
 //*********************************************************************
 int i;      // Global index purpose
-typedef struct app_state_machine{
-    uint8_t state;
-    uint8_t can_data_available;
-}app_state_machine_type; 
-app_state_machine_type app; //state
-enum states{
-    ERROR = 0,
-    INIT,
-    SERIAL_CAN_READ,
-    DECODE_CAN_DATA,
-    FLASH_WRITE,
-    JUMP_TO_APPLICATION,
-    RESET_AT_BOOT_ERROR
-};
+
 
 typedef struct flash_wr_info{
 	uint32_t curr_flash_write_addr; // Current flash write address
@@ -84,19 +64,7 @@ enum com_standard{
 	CAN_TXN_ACK
 };
 
-#define CAN_START_FLASH_WRITE           1   // Start the flash wite seq
-#define CAN_SEND_FLASH_ADRESS           2
-#define CAN_SEND_FLASH_DATA             3
-#define CAN_SEND_EOF                    4
-#define CAN_SEND_EXT_SEG_ADDR           5
-#define CAN_SEND_START_SEG_ADDR         6
-#define CAN_SEND_EXT_LIN_ADDR           7
-#define CAN_SEND_START_LIN_ADDR         8
-#define CAN_SEND_JUMP_TO_APP            9
-#define CAN_SEND_PAGE_COMPLETE          10
-#define CAN_SEND_DATA_WRITE_READY       11
-#define CAN_SEND_EOF_MCU_RESET          12
-#define CAN_SENT_FLASH_WRITE_ERROR      13
+
 
 /*##################################################*/
 #define MAX_FLASH_PAGE_SIZE_IN_BYTE     128
@@ -113,7 +81,7 @@ enum com_standard{
 
 
 
-struct io_descriptor *serial_io;		// Instance for USART LabVIEW serial
+
 
 
 /*
@@ -179,18 +147,17 @@ void decode_can_data();
 
 
 
-
 //------------------------------------------------------------------------------------
 
 int main(void)
 {
 	atmel_start_init();
    
-    /* Machine states data */
+	/* Machine states data */
     
-     // hold the can data
+	// hold the can data
     /*All init section  ===========================*/
-    usart_sync_get_io_descriptor(&TARGET_IO, &serial_io);	// Get the descriptor
+    
     
     
     
@@ -212,17 +179,55 @@ int main(void)
     flash_write_info.curr_flash_write_addr = APP_START_BASE_ADDRESS;
     serial_read_data.uart_frame_received = 0;
     can.can_id = -1;
-    app.can_data_available = 0; 
+    
+    
+    
+    
+	app.state = INIT;    
 	while (1) {
-        /*Read the serial data through can */
-        //read_serial_data();
-        /* If the data is available */
-        //if(app.can_data_available){
-          //  app.can_data_available = 0;
-          //  decode_can_data();
-       // }
-	printf("t001212AB\r");
-	delay_ms(1000);
+		switch(app.state){
+			case INIT:
+				can_init(&can);
+				/* Next state */
+				app.state = SERIAL_CAN_READ;
+			break;
+			
+			case SERIAL_CAN_READ:
+				if(can_read(&can)){
+					/* If new data is available then decode*/
+					app.state = DECODE_CAN_DATA;
+				} else {
+					/* else continue polling */
+					app.state = SERIAL_CAN_READ;
+					
+				}
+				
+			break;
+			
+			case DECODE_CAN_DATA:
+				
+				
+				decode_can_data();
+				/* Next state */
+				app.state = SERIAL_CAN_READ;
+			break;
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			default:
+				app.state = SERIAL_CAN_READ; // Always listen to programmer
+			break;
+		}
 	}
 }
 /*
@@ -250,7 +255,7 @@ void decode_can_data()
             can.can_data[1] = (uint8_t)flash_write_info.temp_32bit_data;
             can.can_data[2] = (uint8_t)(flash_write_info.temp_32bit_data >> 8);
             can.len = 3;
-            send_serial_data();
+		can_write(&can);
         break;
                     
                     
@@ -261,168 +266,6 @@ void decode_can_data()
         default:
         break;
     }   
-}
-/*
-################################################
-* Function:             read_serial_data
-* Operation:
-* params:
-* return:
-################################################
-*/
-void read_serial_data()
-{
-    if(usart_sync_is_rx_not_empty(&TARGET_IO)){ //
-			io_read(serial_io, serial_read_data.recv_char_buff , 1);
-			   
-			if(serial_read_data.recv_char_buff[0] == 't'){	// If the character is t reset all the values and start sampling the frame
-				serial_read_data.serial_buff_size = 0; // Start the string           
-			} else if((serial_read_data.recv_char_buff[0] == '\n') || (serial_read_data.recv_char_buff[0] == '\r')) {	// If \r received then stop sampling character and start process the frame. 
-				serial_read_data.uart_frame_received = 1;
-			} else {
-				serial_read_data.recv_serial_frame[serial_read_data.serial_buff_size++] = serial_read_data.recv_char_buff[0]; // Fill the buffer character by character
-			}
-	}
-	
-    /*  One complete usb frame is received and process the frame */
-	if(serial_read_data.uart_frame_received){
-        serial_read_data.uart_frame_received = 0;	// One frame has processed start receiving new frame
-		// Copy the ID from the frame and convert to actual value
-		for(int i = 0 ; i < 3 ; i++){
-			serial_read_data.serial_recv_can_id_temp[i] = serial_read_data.recv_serial_frame[i];
-		}   
-        can.can_id = hexadecimalToDecimal(serial_read_data.serial_recv_can_id_temp);
-        
-		// Copy the len from the data bytes and convert it to actual values
-        serial_read_data.serial_recv_can_len_temp[0] = serial_read_data.recv_serial_frame[3];
-        can.len = hexadecimalToDecimal(serial_read_data.serial_recv_can_len_temp);
-           
-        int index = 0;
-		for(int i = 4 ; (i < (4 + (can.len*2))) && (i < serial_read_data.serial_buff_size) ; i+=2){ // One byte means 2 character in serial
-				serial_read_data.serial_recv_can_data_temp[0] = serial_read_data.recv_serial_frame[i];
-                serial_read_data.serial_recv_can_data_temp[1] = serial_read_data.recv_serial_frame[i+1];
-				can.can_data[index++] = hexadecimalToDecimal(serial_read_data.serial_recv_can_data_temp);
-		}
-      
-        /*
-            printf("SERIAL CAN data decompose------\n\r");
-            printf("Whole String :%s:\n\r",serial_read_data.recv_serial_frame);
-            printf("Recv CAN ID :%s: :%x\n\r",serial_read_data.serial_recv_can_id_temp, can.can_id);
-            printf("Recv CAN Len :%s: :%d\n\r",serial_read_data.serial_recv_can_len_temp , can.len);
-            for(int i = 0 ; i<8 ; i++){
-                printf("-%x-",can.can_data[i]);
-            }
-            printf("\n\r---------------------------\n\r");
-        */
-                    
-        memset(serial_read_data.recv_serial_frame , 0 ,25);
-        memset(serial_read_data.serial_recv_can_id_temp , 0 ,3);
-        memset(serial_read_data.serial_recv_can_data_temp , 0 ,2);
-        serial_read_data.serial_recv_can_len_temp[0] = 0;
-        
-        app.can_data_available = 1; // after process the string can data is available
-	}	
-}
-/*
-################################################
-* Function:             send_serial_data
-* Operation:
-* params:
-* return:
-################################################
-*/
-void send_serial_data()
-{
-    /* Clear the buffers */
-    memset(serial_write_data.uart_tx_frame_buff , 0 ,25);
-    memset(serial_write_data.temp_id_copy_buffer , 0 ,3);
-    memset(serial_write_data.temp_id_buff , 0 ,3);
-    memset(serial_write_data.temp_data_buff , 0 ,2);
-    
-    /*First element of the string is 't' */
-    serial_write_data.uart_tx_frame_buff[0] = 't';
-									
-	/* CAN ID convert to string and concat to uart_tx_buffer */
-	itoa(can.can_id,serial_write_data.temp_id_copy_buffer,16);
-    // zero padding in MSb 
-        
-    switch(strlen(serial_write_data.temp_id_copy_buffer)){
-        case 1: //if len is 1 the padding 0 to first 2 place
-            serial_write_data.temp_id_buff[0] = 0;
-            serial_write_data.temp_id_buff[1] = 0;
-            serial_write_data.temp_id_buff[2] = serial_write_data.temp_id_copy_buffer[0];
-        break;
-            
-        case 2: //if len is 1 the padding 0 to first 2 place
-            serial_write_data.temp_id_buff[0] = 0;
-            serial_write_data.temp_id_buff[1] = serial_write_data.temp_id_copy_buffer[0];
-            serial_write_data.temp_id_buff[2] = serial_write_data.temp_id_copy_buffer[1];
-        break;
-            
-        case 3: //if len is 1 the padding 0 to first 2 place
-            serial_write_data.temp_id_buff[0] = serial_write_data.temp_id_copy_buffer[0];
-            serial_write_data.temp_id_buff[1] = serial_write_data.temp_id_copy_buffer[1];
-            serial_write_data.temp_id_buff[2] = serial_write_data.temp_id_copy_buffer[2];
-        break;
-            
-        default: // never happen unless the ID is out of valid range
-        break;
-    }
-        
-    int i = 0;
-    for(i=0; i < 3 ; i++){		
-        if((serial_write_data.temp_id_buff[i] >= 'a') && (serial_write_data.temp_id_buff[i] <= 'f'))
-			serial_write_data.temp_id_buff[i] = toupper(serial_write_data.temp_id_buff[i]);
-		else if(serial_write_data.temp_id_buff[i] == 0)
-			serial_write_data.temp_id_buff[i] = 48; // ascii of 0
-		else{}
-	}				
-	strcat(serial_write_data.uart_tx_frame_buff , serial_write_data.temp_id_buff); /* concat with the uart_tx_frame_buffer*/
-		
-	/*data len converted to sting and transmit */
-			
-	serial_write_data.uart_tx_frame_buff[4] = (uint8_t)(can.len+48); /* Length cann't be greater than 4 so put it as same posion is 4th byte*/
-			
-	/* 8 byte data conversion and concat to uart_tx_frame_buff */
-    int main_string_index = 5;
-    for(i=0 ; i < can.len; i++){        
-		itoa(can.can_data[i],serial_write_data.temp_data_buff,16);
-        
-		/* swap \0 and single character convention */
-		if(can.can_data[i]<16){
-			uint8_t temp = serial_write_data.temp_data_buff[0];
-			serial_write_data.temp_data_buff[0] = serial_write_data.temp_data_buff[1];
-			serial_write_data.temp_data_buff[1] = temp;
-		}
-				
-		/*1st digit conversion of byte */
-		if((serial_write_data.temp_data_buff[0] >= 'a') && (serial_write_data.temp_data_buff[0] <= 'f'))
-			serial_write_data.temp_data_buff[0] = toupper(serial_write_data.temp_data_buff[0]);
-		else if(serial_write_data.temp_data_buff[0] == 0)
-			serial_write_data.temp_data_buff[0] = 48;
-        else{}
-		
-        serial_write_data.uart_tx_frame_buff[main_string_index++] = serial_write_data.temp_data_buff[0];
-        
-        
-		/*2nd digit conversion of byte */
-		if((serial_write_data.temp_data_buff[1] >= 'a') && (serial_write_data.temp_data_buff[1] <= 'f'))
-			serial_write_data.temp_data_buff[1] = toupper(serial_write_data.temp_data_buff[1]);
-		else if(serial_write_data.temp_data_buff[1] == 0)
-			serial_write_data.temp_data_buff[1] = 48;
-		else{}
-        serial_write_data.uart_tx_frame_buff[main_string_index++] = serial_write_data.temp_data_buff[1];
-        
-		/* concatenate to the main sting according to LSB to MSB
-		one by one after every byte convention in loop
-        finding problem here */
-		//strcat(serial_write_data.uart_tx_frame_buff , serial_write_data.temp_data_buff);
-	}
-	/* a \r should be padded after the bytes 5+ (i*2) */
-	serial_write_data.uart_tx_frame_buff[5+(i*2)] = '\r';											
-	int serial_data_len = (6+(i*2));
-	/* Send string to to Serial */
-    io_write(serial_io , serial_write_data.uart_tx_frame_buff, serial_data_len); // Calculate based on the data len
 }
 
 /*

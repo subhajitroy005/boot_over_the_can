@@ -19,7 +19,7 @@ void config_serial_port(char* port_name)
                               0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
         
         if(serial_io_reference == NULL){ // If it is null then problem with serial
-                printf("[SERIAL DRV][ ERR ] Opening serial poart!\n\r");
+                printf("[SERIAL DRV][ ERR ] Opening serial poart!\n");
                 exit(EXIT_FAILURE);
         }
 
@@ -41,7 +41,7 @@ void config_serial_port(char* port_name)
 	serial_io_dcbSerialParams.dcb.fAbortOnError       = TRUE;
 
 	if (!SetCommState(serial_io_reference, &serial_io_dcbSerialParams.dcb)){
-		printf("[SERIAL DRV][ ERR ] setting serial port config!\n\r");
+		printf("[SERIAL DRV][ ERR ] setting serial port config!\n");
 	}
 
         /* Setting serial timeout parameters */
@@ -56,17 +56,17 @@ void config_serial_port(char* port_name)
 
 	if(!SetCommTimeouts(serial_io_reference, &serial_io_time_out)) 
 	{
-		printf("[SERIAL DRV][ ERR ] Setting serial port timeout!\n\r");
+		printf("[SERIAL DRV][ ERR ] Setting serial port timeout!\n");
 	}
 
         /* Set the event mask */
         event_mask = 1;
         if(!SetCommMask(serial_io_reference, event_mask)){
-                printf("[SERIAL DRV][ ERR ] Setting serial event mask!\n\r");
+                printf("[SERIAL DRV][ ERR ] Setting serial event mask!\n");
         }
         //GetCommMask(serial_io_reference, &event_mask); // not require to check here
 
-        printf("[SERIAL DRV][ OK ] Serial connection\n\r");
+        printf("[SERIAL DRV][ OK ] Serial connection\n");
 }
 
 
@@ -84,12 +84,12 @@ void write_serial_string(char* string_data)
 	int byte_written = 0;
 
         #if OUTGOING_SERIAL_DRIVER_PRINT
-                printf("[SERIAL DRV] Write  :%s: len->:%d:\n\r",string_data, strlen(string_data));
+                printf("[SERIAL DRV] Write  :%s: len->:%d:\n",string_data, strlen(string_data));
         #endif
 
 
 	if(!WriteFile(serial_io_reference, serial_write_buff, byte_to_write, &dwBytesWritten, NULL)){ 
-		printf("[SERIAL DRV][ ERR ] Write -> Written %d out of %d\n\r",byte_written, byte_to_write);
+		printf("[SERIAL DRV][ ERR ] Write -> Written %d out of %d\n",byte_written, byte_to_write);
 	}
 }
 
@@ -97,43 +97,41 @@ void read_serial_string(uint8_t * buffer)
 {       
         DWORD byte_read = 0;
         int actual_data_index = 0;
+        memset(serial_read_buff, 0 , MAX_INCOMMING_STRING_LENGTH);
         /* Wait here for serial get any rx byte */
         WaitCommEvent(serial_io_reference, &event_mask, NULL);
         
         /* Read the data here after event complete */
         long unsigned int ret = ReadFile(serial_io_reference, serial_read_buff, MAX_INCOMMING_STRING_LENGTH, &byte_read, NULL);
         
-        Sleep(1000);
 
         #if INCOMMING_SERIAL_DRIVER_PRINT
-        printf("[SERIAL DRV] Read\n\r");
-        printf("[SERIAL DRV] Read  %s len->%d\n\r",serial_read_buff, strlen(serial_read_buff));
+        printf("[SERIAL DRV] Read  :%s: len->%d\n",serial_read_buff, strlen(serial_read_buff));
         #endif
 
 	/* Extract the actual data from start and terminatoin character */	
         for(int i =0 ; i < byte_read ; i++  ){
                 
                 /* Starting character */
-                if(serial_read_buff[i] == SERIAL_START_CHAR){
+                if(serial_read_buff[i] == 't'){
                         actual_data_index = 0; // reset the index as zero
                                                // So that rest part will start from zero
 
 
                 /* Termination character */
-                } else if(serial_read_buff[i] == SERIAL_TERM_CHAR){
+                } else if(serial_read_buff[i] == '\n'){
                         // Break the loop so that we don't need the other rest part after termination
                         break;
 
 
-
                 /* Other character */
                 } else {
-                    buffer[actual_data_index] = serial_read_buff[i];
+                    buffer[actual_data_index++] = serial_read_buff[i];
                 }
            }
         
         #if INCOMMING_SERIAL_DRIVER_PRINT
-        printf("[SERIAL DRV] Extracted read  :%s: len->:%d:\n\r",buffer, strlen(buffer));
+        printf("[SERIAL DRV] Extracted read  :%s: len->:%d:\n", buffer , strlen(buffer));
         #endif
         
 }
