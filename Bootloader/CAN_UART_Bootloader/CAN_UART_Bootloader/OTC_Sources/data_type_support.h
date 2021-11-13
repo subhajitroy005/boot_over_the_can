@@ -43,9 +43,9 @@ enum states{
 /* Main application to can driver support */
 typedef struct _can_context //
 {
-	uint8_t can_id;
+	uint32_t can_id;
 	uint8_t can_data[64];
-	uint8_t len;
+	uint32_t len;
 	char * can_serial_port;
 }can_context_type;
 

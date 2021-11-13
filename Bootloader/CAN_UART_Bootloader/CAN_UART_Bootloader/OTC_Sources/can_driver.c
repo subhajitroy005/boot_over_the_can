@@ -10,7 +10,7 @@ struct io_descriptor * serial_io;	// Instance for USART LabVIEW serial
 
 uint8_t buffer[MAX_INCOMMING_STRING_LENGTH];
 uint8_t serial_recv_can_id_temp[3] = {};
-uint16_t serial_can_tx_id = 0;
+uint32_t serial_can_tx_id = 0;
 uint8_t serial_recv_can_len[1] = {};
 uint8_t serial_can_tx_len = 0;
 uint8_t serial_can_data[8] = {};
@@ -36,7 +36,7 @@ void can_init(const can_context_type * can)
 }
 
 
-void can_write(const can_context_type * can)
+void can_write(can_context_type * can)
 {
 	/*	--------------------------------------
 		Communication mode is CAN 
@@ -60,37 +60,37 @@ void can_write(const can_context_type * can)
         memset(temp_buff , 0 , 3);
         memset(temp_copy_buffer , 0 , 3);
         memset(temp_buff_data , 0 , 2);
-
-
+	
         /*First element of the string is 't' */
         uart_tx_frame_buff[0] = 't';							
         
         /* CAN ID convert to string and concat to uart_tx_buffer */
 	//itoa (can->can_id,temp_buff,16);
         sprintf(temp_buff, "%x", can->can_id);
+
         // zero padding in MSb
         switch(strlen(temp_buff)){
-            case 1: //if len is 1 the padding 0 to first 2 place
-                temp_copy_buffer[0] = 0;
-                temp_copy_buffer[1] = 0;
-                temp_copy_buffer[2] = temp_buff[0];
-            break;
+		case 1: //if len is 1 the padding 0 to first 2 place
+			temp_copy_buffer[0] = 0;
+			temp_copy_buffer[1] = 0;
+			temp_copy_buffer[2] = temp_buff[0];
+		break;
             
-            case 2: //if len is 1 the padding 0 to first 2 place
-                temp_copy_buffer[0] = 0;
-                temp_copy_buffer[1] = temp_buff[0];
-                temp_copy_buffer[2] = temp_buff[1];
-            break;
+		case 2: //if len is 1 the padding 0 to first 2 place
+			temp_copy_buffer[0] = 0;
+			temp_copy_buffer[1] = temp_buff[0];
+			temp_copy_buffer[2] = temp_buff[1];
+		break;
             
-            case 3: //if len is 1 the padding 0 to first 2 place
-                temp_copy_buffer[0] = temp_buff[0];
-                temp_copy_buffer[1] = temp_buff[1];
-                temp_copy_buffer[2] = temp_buff[2];
-            break;
+		case 3: //if len is 1 the padding 0 to first 2 place
+			temp_copy_buffer[0] = temp_buff[0];
+			temp_copy_buffer[1] = temp_buff[1];
+			temp_copy_buffer[2] = temp_buff[2];
+		break;
             
-            default: // never happen unless the ID is out of valid range
-            break;
-        }
+		default: // never happen unless the ID is out of valid range
+		break;
+	}
 	int i = 0;
 	for(i=0; i < 3 ; i++){		
 		if((temp_copy_buffer[i] >= 'a') && (temp_copy_buffer[i] <= 'f'))
@@ -99,11 +99,21 @@ void can_write(const can_context_type * can)
 			temp_copy_buffer[i] = 48; // ascii of 0
 		else{}
 	}
-               				
+        
+	#if OUTGOING_CAN_DRIVER_PRINT
+	printf("[CAN DRV] WR Seg ID [%d] :%s:\n", can->can_id, temp_copy_buffer);
+	#endif
+	       				
 	strcat(uart_tx_frame_buff , temp_copy_buffer); /* concat with the uart_tx_frame_buffer*/	
 	/*data len converted to sting and transmit */
 	uart_tx_frame_buff[4] = (uint8_t)(can->len+48); /* Length cann't be greater than 4 so put it as same posion is 4th byte*/
-			
+	
+	#if OUTGOING_CAN_DRIVER_PRINT
+	printf("[CAN DRV] WR Seg Len [%d] :%c:\n",can->len,uart_tx_frame_buff[4]);
+	#endif
+	#if OUTGOING_CAN_DRIVER_PRINT
+	printf("[CAN DRV] WR Seg data: ");
+	#endif		
 	/* 8 byte data conversion and concat to uart_tx_frame_buff */
         i= 0;
 	for(i=0 ; i < can->len; i++){
@@ -128,20 +138,27 @@ void can_write(const can_context_type * can)
 		else if(temp_buff_data[1] == 0)
 			temp_buff_data[1] = 48;
 		else{}
+			
+		#if OUTGOING_CAN_DRIVER_PRINT
+		printf("-[%d]:%s:-",can->can_data[i], temp_buff_data);
+		#endif	
 		/* concatenate to the main sting according to LSB to MSB
 		one by one after every byte convention in loop*/
 		strcat(uart_tx_frame_buff , temp_buff_data);						 
 	}
-               
+        #if OUTGOING_CAN_DRIVER_PRINT
+        printf("\n");
+        #endif 
+	       
 	//io_write(lv_io , temp_buff_data, 2);
 	/* a \r should be padded after the bytes 5+ (i*2) */
-	uart_tx_frame_buff[5+(i*2)] = '\r';											
+	uart_tx_frame_buff[5+(i*2)] = '\n';											
 	int serial_data_len = (6+(i*2));
 	/* Send string to to Serial */
         uint8_t * uint8_data = (uint8_t *)uart_tx_frame_buff;
 
         #if OUTGOING_CAN_DRIVER_PRINT
-                printf("[CAN DRV] Write :%s:\n",uart_tx_frame_buff);
+                printf("[CAN DRV] WR Write :%s:\n",uart_tx_frame_buff);
         #endif
 
 	io_write(serial_io , uart_tx_frame_buff, serial_data_len); // Calculate based on the data len
@@ -211,7 +228,7 @@ int can_read(can_context_type * can)
 		serial_can_tx_id = hexadecimalToDecimal(serial_recv_can_id_temp);
 
 		#if INCOMMING_CAN_DRIVER_PRINT
-		printf("[CAN DRV] Segmented ID: %s\n",serial_recv_can_id_temp);
+		printf("[CAN DRV] Segmented ID: :%s: ->[%d]\n",serial_recv_can_id_temp,serial_can_tx_id);
 		#endif
 		
 		can->can_id = serial_can_tx_id;
@@ -221,7 +238,7 @@ int can_read(can_context_type * can)
 		serial_can_tx_len = hexadecimalToDecimal(serial_recv_can_len);
 
 		#if INCOMMING_CAN_DRIVER_PRINT
-		printf("[CAN DRV] Segmented LEN: %d\n",serial_can_tx_len);
+		printf("[CAN DRV] Segmented LEN: [%d]\n",serial_can_tx_len);
 		#endif
 
 		can->len = serial_can_tx_len;

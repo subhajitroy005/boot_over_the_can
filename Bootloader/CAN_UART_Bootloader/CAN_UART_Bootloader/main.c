@@ -40,15 +40,7 @@ typedef union bits_conversion{
 bits_conversion_type bits_union;
 
 
-typedef struct _can_data{
-    uint32_t can_id;
-    int len;
-    uint8_t can_data[8];
-}can_data_type;
-can_data_type can;
-
-
-
+can_context_type can;
 
 
 
@@ -205,11 +197,8 @@ int main(void)
 			break;
 			
 			case DECODE_CAN_DATA:
-				
-				
 				decode_can_data();
-				/* Next state */
-				app.state = SERIAL_CAN_READ;
+				/* Next state updated in can decode */
 			break;
 			
 			
@@ -240,22 +229,25 @@ int main(void)
 */
 void decode_can_data()
 {
-    switch(can.can_id){
+	switch(can.can_id){
         /*
          * Boot start requested form HOST application
          * send the page size[1 byte] 
          * and base address[ 2 byte]
         */
         case CAN_START_FLASH_WRITE:
-            can.can_id = CAN_START_FLASH_WRITE;
-            can.can_data[0] = (uint8_t)get_flash_page_size();
-            page_size = can.can_data[0]; // update the page size
-            /*Send the base address of application */
-            flash_write_info.temp_32bit_data = flash_write_info.curr_flash_write_addr;
-            can.can_data[1] = (uint8_t)flash_write_info.temp_32bit_data;
-            can.can_data[2] = (uint8_t)(flash_write_info.temp_32bit_data >> 8);
-            can.len = 3;
+		can.can_id = CAN_START_FLASH_WRITE;
+		can.can_data[0] = (uint8_t)get_flash_page_size();
+		page_size = can.can_data[0]; // update the page size
+		/*Send the base address of application */
+		flash_write_info.temp_32bit_data = flash_write_info.curr_flash_write_addr;
+		can.can_data[1] = (uint8_t)flash_write_info.temp_32bit_data;
+		can.can_data[2] = (uint8_t)(flash_write_info.temp_32bit_data >> 8);
+		can.len = 3;
 		can_write(&can);
+		
+		/* NExt state */
+		app.state = SERIAL_CAN_READ;
         break;
                     
                     
@@ -264,6 +256,7 @@ void decode_can_data()
                     
                     
         default:
+		app.state = SERIAL_CAN_READ; // default will be read can commands
         break;
     }   
 }
