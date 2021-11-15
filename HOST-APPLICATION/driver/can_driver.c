@@ -12,12 +12,11 @@ uint8_t can_tx_data[8] = {0}; // store temp hex data from can
 
 
 
- uint8_t temp_buff[3] = {0, 0 ,0};
+uint8_t temp_buff[3] = {0, 0 ,0};
 uint8_t temp_copy_buffer[3] = {0};
- uint8_t temp_buff_data[2] = {0};
-uint8_t	uart_tx_frame_buff[30]= {0};
+uint8_t temp_buff_data[2] = {0};
 uint8_t temp=0;
-
+uint8_t	uart_tx_frame_buff[30]= {0};
 
 
 
@@ -40,10 +39,14 @@ void can_write(can_context_type * can)
         // Serial String Format tiiildddd..dd\n | max data is the byte
        
         memset(uart_tx_frame_buff , 0 , 30);
+
         memset(temp_buff , 0 , 3);
         memset(temp_copy_buffer , 0 , 3);
         memset(temp_buff_data , 0 , 2);
 
+        #if OUTGOING_CAN_DRIVER_PRINT
+	printf("---------------------------------------\n");
+	#endif
 
         /*First element of the string is 't' */
         uart_tx_frame_buff[0] = 't';							
@@ -86,9 +89,16 @@ void can_write(can_context_type * can)
         #if OUTGOING_CAN_DRIVER_PRINT
 	printf("[CAN DRV] WR Seg ID [%d] :%s:\n", can->can_id, temp_copy_buffer);
 	#endif
+	strcat(uart_tx_frame_buff , temp_copy_buffer); /* concat with the uart_tx_frame_buffer*/
 
 
-	strcat(uart_tx_frame_buff , temp_copy_buffer); /* concat with the uart_tx_frame_buffer*/	
+        memset(temp_buff , 0 , 3);
+        memset(temp_copy_buffer , 0 , 3);
+        memset(temp_buff_data , 0 , 2);
+
+
+
+
 	/*data len converted to sting and transmit */
 	uart_tx_frame_buff[4] = (uint8_t)(can->len+48); /* Length cann't be greater than 4 so put it as same posion is 4th byte*/
         #if OUTGOING_CAN_DRIVER_PRINT
@@ -104,6 +114,10 @@ void can_write(can_context_type * can)
         i= 0;
         int j=5;
 	for(i=0 ; i < can->len; i++){
+                memset(temp_buff , 0 , 3);
+                memset(temp_copy_buffer , 0 , 3);
+                memset(temp_buff_data , 0 , 2);
+
 		sprintf(temp_buff_data , "%x" , can->can_data[i]);
 		/* swap \0 and single character convention */
 		if(can->can_data[i]<16){
@@ -137,7 +151,7 @@ void can_write(can_context_type * can)
 		#endif					 
 	}
         #if OUTGOING_CAN_DRIVER_PRINT
-        printf("\n-----------------\n");
+        printf("\n---------------------------------------\n");
         #endif
 
 	//io_write(lv_io , temp_buff_data, 2);
@@ -164,13 +178,14 @@ void can_read(can_context_type * can)
         memset(can_tx_data ,0 ,8);
 
         #if INCOMMING_CAN_DRIVER_PRINT
+                printf("---------------------------------------\n");
                 printf("[CAN DRV] Serial req!\n");
         #endif
 
         read_serial_string(buffer);
 
         #if INCOMMING_CAN_DRIVER_PRINT
-                printf("[CAN DRV] Read %s\n", buffer);
+                printf("[CAN DRV] Read :%s:\n", buffer);
         #endif
 
         int i =0;
@@ -217,7 +232,7 @@ void can_read(can_context_type * can)
         }
 
         #if INCOMMING_CAN_DRIVER_PRINT
-        printf("\n");
+        printf("\n---------------------------------------\n");
         #endif
         
 }

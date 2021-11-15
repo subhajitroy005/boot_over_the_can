@@ -85,6 +85,7 @@ _______________________________________________________
 typedef struct _each_hex_line_info{
 	uint8_t	whole_line_temp_buff[200]; // temp buffer for read a line form queue
 	int line_count;
+	int total_line_count;
 	/* Hex file each line segmented data */
 	int			data_len;	// Data length
 	uint32_t	data_start_adress;	// MCU write start adress
@@ -105,6 +106,9 @@ typedef struct _each_hex_line_info{
 typedef struct flash_wr_info{
 	/* Counters related data*/
 	int mcu_page_size;
+	int sent_page_byte_counter;
+	int page_byte_seq;
+	int packet_byte_counter;
 	/*addres  related data*/
 	uint32_t curr_mcu_mem_addr;
 	uint32_t curr_hex_line_adress;

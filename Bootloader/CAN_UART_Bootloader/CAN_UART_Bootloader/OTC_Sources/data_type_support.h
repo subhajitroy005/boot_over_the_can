@@ -50,6 +50,43 @@ typedef struct _can_context //
 }can_context_type;
 
 
+/* Flash write related variables */
+typedef struct flash_wr_info{
+	/* Flash adress related */
+	uint32_t	curr_flash_write_addr; // Current flash write address track the adress data to be written
+	
+	/* Buffers for flash write*/
+	uint8_t		flash_wr_buffer[128]; // MAX page size related
+	int		flash_wr_buffer_index;
+	
+	/* Counters */
+	int page_byte_seq;
+	
+	
+	
+	uint32_t last_sent_ext_lin_addr;
+	uint32_t wr_success_page_counter;
+	uint32_t write_page_byte_counter;
+	uint32_t page_byte_counter;
+	uint32_t flash_write_seq;
+	/* Temp data buffers*/
+	uint8_t temp_ext_lin_addr_buff[4]; // temp for string conv
+	uint32_t temp_ext_lin_addr; // temp for doing the bit shifting
+	uint32_t temp_curr_page_addr; //temp for sending over can
+	uint8_t temp_8bit_data;
+	uint32_t temp_32bit_data;
+	
+	
+	
+	
+	
+	
+	
+	
+	
+}flash_wr_info_type;
+
+
 
 
 

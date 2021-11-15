@@ -10,7 +10,7 @@
 #define MESSAGE_ID_H_
 
 
-#define CAN_START_FLASH_WRITE           1   // Start the flash wite seq
+#define CAN_START_FLASH_WRITE           1
 #define CAN_SEND_FLASH_ADRESS           2
 #define CAN_SEND_FLASH_DATA             3
 #define CAN_SEND_EOF                    4

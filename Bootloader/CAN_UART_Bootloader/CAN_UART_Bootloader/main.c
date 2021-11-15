@@ -8,39 +8,10 @@
 
 
 //*********************************************************************
-int i;      // Global index purpose
+can_context_type		can;
+flash_wr_info_type		flash_write_info;
 
 
-typedef struct flash_wr_info{
-	uint32_t curr_flash_write_addr; // Current flash write address
-    
-    
-    
-    
-    
-	uint32_t last_sent_ext_lin_addr;
-	uint32_t wr_success_page_counter;
-	uint32_t write_page_byte_counter;
-    uint32_t page_byte_counter;
-    uint32_t flash_write_seq;
-	/* Temp data buffers*/
-	 uint8_t temp_ext_lin_addr_buff[4]; // temp for string conv
-	 uint32_t temp_ext_lin_addr; // temp for doing the bit shifting
-     uint32_t temp_curr_page_addr; //temp for sending over can
-     uint8_t temp_8bit_data;
-     uint32_t temp_32bit_data;
-}flash_wr_info_type;
-flash_wr_info_type flash_write_info;
-
-typedef union bits_conversion{
-    uint8_t byte_arr[8];
-    uint8_t byte_data;
-    uint32_t bit32_data;
-}bits_conversion_type;
-bits_conversion_type bits_union;
-
-
-can_context_type can;
 
 
 
@@ -174,7 +145,10 @@ int main(void)
     
     
     
-    
+	/* Reset the variables */
+	flash_write_info.flash_wr_buffer_index = 0; // reset after every page write
+	flash_write_info.page_byte_seq = 0;
+	
 	app.state = INIT;    
 	while (1) {
 		switch(app.state){
@@ -204,13 +178,9 @@ int main(void)
 			
 			
 			
-			
-			
-			
-			
-			
-			
-			
+			case ERROR: // Error so not able to start app
+				app.state = SERIAL_CAN_READ;
+			break;			
 			
 			
 			default:
@@ -249,11 +219,75 @@ void decode_can_data()
 		/* NExt state */
 		app.state = SERIAL_CAN_READ;
         break;
-                    
-                    
-                     
+	
+	/*
+         * Flash data from host application
+         * Send ack of the data receive 
+         * byte[0] = same seq number
+	 * byte[1] = number of bytes
+	 * byte[2:7] = data bytes
+        */
+	case CAN_SEND_FLASH_DATA:
+		if(flash_write_info.page_byte_seq == can.can_data[0]){ // if the expected seq matched
+			/* Assign the data bytes from the can to page write buffer */
+			// can->data[1] is the number of bytes in a packet
+			// j is for index the data bytes 
+			for(int i = 0 , j = 2; (i < can.can_data[1]) ; i++, j++){
+				flash_write_info.flash_wr_buffer[flash_write_info.flash_wr_buffer_index++] = can.can_data[j];
+			}
+			
+			flash_write_info.page_byte_seq++; // Increment the sequence
+			
+			/* ACK this byte pack */
+			can.can_id = CAN_SEND_FLASH_DATA;
+			can.can_data[0] = can.can_data[0];
+			can.len = 1;
+			can_write(&can);
+			
+			/* next is to read next packet */
+			app.state = SERIAL_CAN_READ;
+		} else { // error seq mismatch
+			can.can_id = CAN_SENT_FLASH_WRITE_ERROR;
+			can.can_data[0] = 0;
+			can.len = 1;
+			can_write(&can);
+			/* Error so*/
+			app.state = ERROR;
+		}
+	break;
         
-                    
+	/*
+         * Flash write req from host application
+         * Send ack of write status
+         * byte[0] = write req bit
+        */           
+        case CAN_SEND_PAGE_COMPLETE:
+		if(can.can_data[0]){ // write page and give ack
+			/**/
+			
+			
+			/* reset the counters and buffers */
+			memset(flash_write_info.flash_wr_buffer , 0 , 128);
+			flash_write_info.flash_wr_buffer_index = 0;
+			flash_write_info.page_byte_seq = 0;
+			
+			/* Page write feedback to Host application */
+			can.can_id = CAN_SEND_PAGE_COMPLETE;
+			can.can_data[0] = 1;
+			can.len = 1;
+			can_write(&can);
+			
+			/* Next byte is to read the can data  */
+			app.state = SERIAL_CAN_READ;
+		} else {
+			can.can_id = CAN_SENT_FLASH_WRITE_ERROR;
+			can_write(&can);
+			/* Error so*/
+			app.state = ERROR;
+		}
+	
+	
+        break;    
                     
         default:
 		app.state = SERIAL_CAN_READ; // default will be read can commands

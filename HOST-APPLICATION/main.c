@@ -96,10 +96,10 @@ int main()
 
                                 /* variable default */
                                 each_hex_line_buff.line_count = 0;
-
-
-
-
+                                flash_wr_info.sent_page_byte_counter=0;
+                                flash_wr_info.page_byte_seq = 0;
+                                flash_wr_info.packet_byte_counter = 0;
+                                each_hex_line_buff.total_line_count = 0;
 
 
                                 // Next state
@@ -203,8 +203,15 @@ int main()
                                         /* POP this line after read */ 
                                         pop(&hex_line_q);
                                         
+                                        /* 
+                                                Reset counters for send this line sequences
+                                                On each line the write sequence will be reseted until last EOL
+                                        */
+                                        flash_wr_info.sent_page_byte_counter = 0;
+                                        flash_wr_info.page_byte_seq = 0;
+                                        flash_wr_info.page_byte_seq = 0;
                                         // Next state : File read complete so next state is write to flash
-                                        app.state =  APP_EXIT;
+                                        app.state =  FLASH_WRITE;
                                 } else { // All hex file line adressed file operation done
                                         printf("Nothig in the hex file queue!\n\r");
                                         // Next state
@@ -222,7 +229,68 @@ int main()
                         *********************************************************
                         */
                         case FLASH_WRITE:
+                                switch(each_hex_line_buff.data_type){ // Based on the line type switch to send positions
+                                        case 0: // Data bytes in the line
+                                                if(flash_wr_info.sent_page_byte_counter < each_hex_line_buff.data_len){ // Send bytes
 
+                                                        /* Caution : Not handling the max page bytes as the hex file did that */
+                                                        can_rw.can_id = CAN_SEND_FLASH_DATA;
+                                                        /* byte 0 is the packet seq */
+                                                        can_rw.can_data[0] = flash_wr_info.page_byte_seq++;
+
+                                                        /* Assigning bytes form the packet fomr byte 2 */
+                                                        int i, j; // i index the can data byte j track the number of bytes in a packet
+                                                        for( i =2 ,j = 0; (j< MAX_BYTE_IN_CAN_PACKET) && (flash_wr_info.sent_page_byte_counter < each_hex_line_buff.data_len) ; i++ , j++,  flash_wr_info.sent_page_byte_counter++){
+                                                                can_rw.can_data[i] =  each_hex_line_buff.data[flash_wr_info.sent_page_byte_counter];
+                                                                //printf("%d\n",flash_wr_info.sent_page_byte_counter);        
+                                                        }
+                                                        /* byte 1 is the number of bytes */
+                                                        can_rw.can_data[1] = j;
+                                                        /*2 byte fixed and rest are data bytes */
+                                                        can_rw.len = j+2;
+                                                        can_write(&can_rw);
+                                                        //printf("P data sent!\n");
+                                                        printf(">");
+
+                                                        /* Next state is to see the ack of this bye so can read  */
+                                                        app.state = READ_SERIAL_CAN_DATA;
+                                                } else { // One line data send so request to write in MCU pages
+                                                        printf("[%d]",each_hex_line_buff.line_count);
+
+                                                        /* One line complete so write the data in MCU page req */
+                                                        can_rw.can_id = CAN_SEND_PAGE_COMPLETE;
+                                                        can_rw.can_data[0] = 1;
+                                                        can_rw.len =1;
+                                                        can_write(&can_rw);
+
+                                                        /* Read the MCU page write ack */
+                                                        app.state = READ_SERIAL_CAN_DATA;
+                                                }
+                                        break;
+
+                                        case 1: // End of file and hex file is done and send jump to app
+                                                app.state = APP_EXIT;   
+                                        break;
+
+                                        case 2: // Extended seg adress
+                                        break;
+
+                                        case 3: // Start segment adress
+                                        break;
+
+                                        case 4: // Extended linear adress
+                                        break;
+
+                                        case 5: // Start linear adress
+                                        break;
+                                        
+                                        default: // Record type not found
+                                                printf("[ ERR ] HEX file Record type not found!\n");
+                                                app.state = ERROR;
+                                        break;
+
+
+                                }
                         break;
                 
                         
@@ -299,14 +367,53 @@ void decode_incomming_can_data(can_context_type * can  , type_machine_state * ap
                                 // If success then read the hex file and further process
                                 app->state = DECODE_HEX_FILE;
                         } else {
-                                printf("[ ERR ] MCU page size get 0\n"); 
+                                printf("[<--][ ERR ] MCU page size get 0\n"); 
                                  app->state = ERROR;
                         }
                                 
                 break;
+                
+                /*
+                        After sending a data byte packet this is ack
+                */
+                case CAN_SEND_FLASH_DATA:
+                        /*      Check the sequence what we sent [ increment before so + 1 ] 
+                                is what received by the MCU 
+                        */
+                        if(flash_wr_info.page_byte_seq == can->can_data[0] + 1){
+                                /* Write other bytes */
+                                app->state = FLASH_WRITE;
+                                printf(">"); 
+                        } else {
+                                printf("[<--] MCU data packer seq mismatch\n");
+                                app->state = ERROR;
+                        }
+                break;
+
+                case CAN_SEND_PAGE_COMPLETE:
+                        /* Page write ack from MCU */
+                        if(can->can_data[0]){ // page write successful so decode next line and send
+                                printf("*");
+                                /* Line percentage calculation */
+                                int complete_percent = (int)(((float)each_hex_line_buff.line_count / (float)each_hex_line_buff.total_line_count) * 100); 
+                                printf("   [%d percent done!]\n", complete_percent);
+                                app->state = DECODE_HEX_FILE;
+
+                        } else {
+                                printf("[<--] MCU page write failed !\n");
+                                app->state = ERROR; 
+                        }
+                break;
+
+
+
+                case CAN_SENT_FLASH_WRITE_ERROR: // flash write error in mcu
+                        printf("[<--] ERROR: MCU flah write\n");
+                        app->state = ERROR;
+                break;
 
                 default:
-                        printf("ERROR: CAN Message ID Not listed!%x\n",can->can_id);
+                        printf("[<--]ERROR: CAN Message ID Not listed! [ 0x%x ]\n",can->can_id);
                         app->state = ERROR;
                 break;
         }
@@ -334,6 +441,7 @@ void read_file_to_queue(char * file_name , queue * q)
                 if(ch == '\n'){ // One line is completed perform the sting related operation
                         //each_hex_line_operation(line_buffer);
                         push(q , line_buffer); // Push line data to queue
+                        each_hex_line_buff.total_line_count++;
                 } else if(ch == ':'){ // Strat of the line clear all the sting and variables and alos the :
                         memset(line_buffer , 0 , 200);
                         line_buff_index = 0;
@@ -341,9 +449,11 @@ void read_file_to_queue(char * file_name , queue * q)
                         line_buffer[line_buff_index++] = ch;
                 }
                 ch = getc(file_ptr);
-        }   
+        } 
+
+        each_hex_line_buff.total_line_count= each_hex_line_buff.total_line_count - 1; // One minus for the last line as eol
         close_file(file_ptr);
-        printf("%s: Reading Completed!\n\r" , file_name);
+        printf("%s: Reading Completed! Total Line %d\n" , file_name , each_hex_line_buff.total_line_count);
 }
 
 /*
