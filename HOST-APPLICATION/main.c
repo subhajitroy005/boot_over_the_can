@@ -255,7 +255,7 @@ int main()
                                                         /* Next state is to see the ack of this bye so can read  */
                                                         app.state = READ_SERIAL_CAN_DATA;
                                                 } else { // One line data send so request to write in MCU pages
-                                                        printf("[%d]",each_hex_line_buff.line_count);
+                                                        printf("[Line %d]",each_hex_line_buff.line_count);
 
                                                         /* One line complete so write the data in MCU page req */
                                                         can_rw.can_id = CAN_SEND_PAGE_COMPLETE;
@@ -269,13 +269,24 @@ int main()
                                         break;
 
                                         case 1: // End of file and hex file is done and send jump to app
-                                                app.state = APP_EXIT;   
+                                                can_rw.can_id = CAN_SEND_JUMP_TO_APP;
+                                                can_rw.can_data[0] = 1;
+                                                can_rw.len =1;
+                                                can_write(&can_rw);
+                                                /* Next state read the ack */
+                                                app.state = READ_SERIAL_CAN_DATA;   
                                         break;
 
                                         case 2: // Extended seg adress
                                         break;
 
                                         case 3: // Start segment adress
+                                                can_rw.can_id = CAN_SEND_JUMP_TO_APP;
+                                                can_rw.can_data[0] = 1;
+                                                can_rw.len =1;
+                                                can_write(&can_rw);
+                                                /* Next state read the ack */
+                                                app.state = READ_SERIAL_CAN_DATA;
                                         break;
 
                                         case 4: // Extended linear adress
@@ -394,6 +405,14 @@ void decode_incomming_can_data(can_context_type * can  , type_machine_state * ap
                         /* Page write ack from MCU */
                         if(can->can_data[0]){ // page write successful so decode next line and send
                                 printf("*");
+                                /* MCU send infomations */
+                                printf("    [Bytes %d]",can->can_data[1]);// number of bytes written
+                                flash_wr_info.bit32_data = can->can_data[3];
+                                flash_wr_info.bit32_data = (flash_wr_info.bit32_data << 8);
+                                flash_wr_info.bit32_data &= 0xFF00;
+                                flash_wr_info.bit32_data |= can->can_data[2];
+                                flash_wr_info.curr_mcu_mem_addr  =  flash_wr_info.bit32_data;
+                                printf("[Address: 0x%x]",flash_wr_info.curr_mcu_mem_addr);
                                 /* Line percentage calculation */
                                 int complete_percent = (int)(((float)each_hex_line_buff.line_count / (float)each_hex_line_buff.total_line_count) * 100); 
                                 printf("   [%d percent done!]\n", complete_percent);
@@ -405,7 +424,15 @@ void decode_incomming_can_data(can_context_type * can  , type_machine_state * ap
                         }
                 break;
 
-
+                case CAN_SEND_JUMP_TO_APP:
+                        if(can->can_data[0]){
+                                printf("Upload Complete!\nJump to application....\n");
+                                app->state = APP_EXIT;
+                        } else {
+                                printf("APP jumpo Wrong Ack\n");
+                                app->state = ERROR;
+                        }
+                break;
 
                 case CAN_SENT_FLASH_WRITE_ERROR: // flash write error in mcu
                         printf("[<--] ERROR: MCU flah write\n");

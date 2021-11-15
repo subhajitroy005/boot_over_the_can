@@ -98,7 +98,7 @@ uint32_t page_size = 255;
 
 
 //------------------------------------------------------------------------------------
-void write_array_data_to_flash(uint8_t * data , int * length , int* abs_adress);
+void write_array_data_to_flash(uint8_t * data , int page_size , uint32_t abs_adress);
 int get_flash_page_size();
 int check_flash_data_array(uint8_t * data , int * length , int* abs_adress);
 
@@ -106,6 +106,7 @@ void read_serial_data();
 void send_serial_data();
 void decode_can_data();
 
+/* Application call */
 
 
 
@@ -263,31 +264,73 @@ void decode_can_data()
         */           
         case CAN_SEND_PAGE_COMPLETE:
 		if(can.can_data[0]){ // write page and give ack
-			/**/
+			/* Write to page */
+			uint32_t temp_address = flash_write_info.curr_flash_write_addr;
+			int byte_size = flash_write_info.flash_wr_buffer_index;
+			write_array_data_to_flash(flash_write_info.flash_wr_buffer , byte_size , temp_address);
 			
+			int ret =  check_flash_data_array(flash_write_info.flash_wr_buffer , &flash_write_info.flash_wr_buffer_index , &flash_write_info.curr_flash_write_addr);
+			
+			
+			/* Page write feedback to Host application */
+			can.can_id = CAN_SEND_PAGE_COMPLETE;
+			can.can_data[0] = ret;
+			can.can_data[1] = flash_write_info.flash_wr_buffer_index; // number of byte written
+			flash_write_info.temp_32bit_data = flash_write_info.curr_flash_write_addr;
+			can.can_data[2] = (uint8_t)flash_write_info.temp_32bit_data;
+			can.can_data[3] = (uint8_t)(flash_write_info.temp_32bit_data >> 8);
+			can.len = 4;
+			can_write(&can);
+			
+			
+			/* Update the adress for next write */
+			flash_write_info.curr_flash_write_addr += flash_write_info.flash_wr_buffer_index;
 			
 			/* reset the counters and buffers */
 			memset(flash_write_info.flash_wr_buffer , 0 , 128);
 			flash_write_info.flash_wr_buffer_index = 0;
 			flash_write_info.page_byte_seq = 0;
 			
-			/* Page write feedback to Host application */
-			can.can_id = CAN_SEND_PAGE_COMPLETE;
-			can.can_data[0] = 1;
-			can.len = 1;
-			can_write(&can);
+			
 			
 			/* Next byte is to read the can data  */
 			app.state = SERIAL_CAN_READ;
 		} else {
 			can.can_id = CAN_SENT_FLASH_WRITE_ERROR;
+			can.can_data[0] = 0;
+			can.len = 1;
 			can_write(&can);
 			/* Error so*/
 			app.state = ERROR;
 		}
+        break;
 	
-	
-        break;    
+	/*
+         * Application reset req
+         * Send ack of write status
+         * byte[0] = write req bit
+        */
+	case CAN_SEND_JUMP_TO_APP:
+		if(can.can_data[0]){
+			can.can_id = CAN_SEND_JUMP_TO_APP;
+			can.can_data[0] = 1;
+			can.len = 1;
+			can_write(&can);
+			delay_ms(500);
+			/* Jump to application */
+			
+			void (* app_call)(void) = (void*)(*(volatile uint32_t *)(APP_START_BASE_ADDRESS+4));
+			app_call();	
+		} else {
+			can.can_id = CAN_SENT_FLASH_WRITE_ERROR;
+			can.can_data[0] = 0;
+			can.len = 1;
+			can_write(&can);
+			/* Error so*/
+			app.state = ERROR;
+		}
+		
+	break;    
                     
         default:
 		app.state = SERIAL_CAN_READ; // default will be read can commands
@@ -303,10 +346,10 @@ void decode_can_data()
 * return:
 ################################################
 */
-void write_array_data_to_flash(uint8_t * data , int * page_size , int* abs_adress)
+void write_array_data_to_flash(uint8_t * data , int page_size , uint32_t abs_adress)
 {
     //ASF 4 api for write data
-    flash_write(&FLASH_0, *abs_adress, data, *page_size);
+    flash_write(&FLASH_0, abs_adress, data, page_size);
     
     #if BOOTLOADER_EVENT_PRINT_ENABLE
         printf("DRV: Flash Write [hex] -> %x\n\r",*abs_adress);

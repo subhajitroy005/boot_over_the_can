@@ -64,16 +64,8 @@ typedef struct flash_wr_info{
 	
 	
 	
-	uint32_t last_sent_ext_lin_addr;
-	uint32_t wr_success_page_counter;
-	uint32_t write_page_byte_counter;
-	uint32_t page_byte_counter;
-	uint32_t flash_write_seq;
+
 	/* Temp data buffers*/
-	uint8_t temp_ext_lin_addr_buff[4]; // temp for string conv
-	uint32_t temp_ext_lin_addr; // temp for doing the bit shifting
-	uint32_t temp_curr_page_addr; //temp for sending over can
-	uint8_t temp_8bit_data;
 	uint32_t temp_32bit_data;
 	
 	
