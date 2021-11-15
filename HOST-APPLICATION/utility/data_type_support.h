@@ -83,15 +83,28 @@ typedef struct _can_context //
 _______________________________________________________
 */
 typedef struct _each_hex_line_info{
-	uint8_t data[200];	// contains the data field
-	int 	data_len;	// Data length
-	uint32_t data_start_adress;	// MCU write start adress
-	int	data_type;     // Type of data []
-	uint8_t whole_line_temp_buff[200]; // temp buffer for read a line form queue
+	uint8_t	whole_line_temp_buff[200]; // temp buffer for read a line form queue
+	int line_count;
+	/* Hex file each line segmented data */
+	int			data_len;	// Data length
+	uint32_t	data_start_adress;	// MCU write start adress
+	int			data_type;     // Type of data []
+	uint8_t		data[200];	// contains the data field
+
+	/* Temp variables */
+	
+    uint8_t temp_address[4];
+    uint8_t rec_type[2];
+    uint8_t data_conv_buff[2];
+	uint8_t temp_rec_length[2];
+
+
 }each_hex_line_info_type;
 
 
 typedef struct flash_wr_info{
+	/* Counters related data*/
+	int mcu_page_size;
 	/*addres  related data*/
 	uint32_t curr_mcu_mem_addr;
 	uint32_t curr_hex_line_adress;

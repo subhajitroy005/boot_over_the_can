@@ -2,4 +2,6 @@
 *.out
 *.map
 *.hex
-*.hex
+*.bat
+*.lss
+*.exe

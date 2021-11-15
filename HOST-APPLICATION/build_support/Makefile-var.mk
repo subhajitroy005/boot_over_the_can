@@ -6,7 +6,7 @@ CC = gcc
 LINUX_DEBUG_FILE_DIR = debug_files/x86_linux_deb
 WINDOWS_DEBUG_FILE_DIR = debug_files\x86_windows_deb
 ###### Debug line flag ##############
-DEBUG_FLAGS = 
+DEBUG_FLAGS = -g3
 
 
 ##################### OS command   [Windows -> "Windows" || Linux -> "Linux"]################

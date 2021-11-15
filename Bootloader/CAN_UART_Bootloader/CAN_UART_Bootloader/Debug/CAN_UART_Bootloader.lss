@@ -2748,7 +2748,7 @@ void can_write(can_context_type * can)
      dc4:	3330      	adds	r3, #48	; 0x30
      dc6:	7123      	strb	r3, [r4, #4]
 	#if OUTGOING_CAN_DRIVER_PRINT
-	printf("[CAN DRV] WR Seg data: ",uart_tx_frame_buff[4]);
+	printf("[CAN DRV] WR Seg data: ");
 	#endif		
 	/* 8 byte data conversion and concat to uart_tx_frame_buff */
         i= 0;

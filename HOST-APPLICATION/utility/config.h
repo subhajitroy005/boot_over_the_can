@@ -35,7 +35,7 @@
 #define INCOMMING_CAN_DRIVER_PRINT                      0
 #define OUTGOING_CAN_DRIVER_PRINT                       0
 //------------   Functiontional -------------------------------
-#define EACH_HEX_FILE_LINE_DECOMPOSE_PRINT              0   // Each hex file decompose print enable
+#define EACH_HEX_FILE_LINE_DECOMPOSE_PRINT              1   // Each hex file decompose print enable
 #define FLAS_DEBUG_EN                                   1
 //-------------------------------------------------------------
 #endif

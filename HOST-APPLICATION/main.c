@@ -93,8 +93,17 @@ int main()
                                 */
                                 queue_init(&hex_line_q);
                                 
+
+                                /* variable default */
+                                each_hex_line_buff.line_count = 0;
+
+
+
+
+
+
                                 // Next state
-                                app.state = START_BOOT_FLASH_WRITE;
+                                app.state = READ_FILE;
                         break;
 
                         /*
@@ -133,7 +142,7 @@ int main()
                                 can_rw.can_data[0] = CAN_TXN_QUERY; // send a query
                                 can_rw.len = 1;
                                 can_write(&can_rw);
-                                printf("Boot flash write requested !\n\r");
+                                printf("[-->] Boot flash write requested !\n\r");
 
                                 // Next state
                                 app.state = READ_SERIAL_CAN_DATA;
@@ -179,25 +188,23 @@ int main()
                         */
                         case DECODE_HEX_FILE:
                                 if(queue_size(&hex_line_q) > 0){ // pop the queue until the las element
-                                        /* Clear all the prev mem data */
-                                        memset(each_hex_line_buff.whole_line_temp_buff, 
-                                                0, 
-                                                strlen(each_hex_line_buff.whole_line_temp_buff) );
-                                        memset(each_hex_line_buff.data, 
-                                                0, 
-                                                strlen(each_hex_line_buff.data));
-                                        
-                                        /* Peek a whole line from hex line queue */
-                                        peek(&hex_line_q ,each_hex_line_buff.whole_line_temp_buff);
 
+                                        /* Clear the temp buffer */
+                                        memset(each_hex_line_buff.whole_line_temp_buff , 0 , 200);;
+                                        /* Peek a whole line from hex line queue */
+                                        peek(&hex_line_q , each_hex_line_buff.whole_line_temp_buff);
+                                        
+                                        /* Update the line cout */
+                                        each_hex_line_buff.line_count++;
+                                        
                                         /* Segment each hex line and extract the data from a line */
                                         each_hex_line_operation(&each_hex_line_buff);
 
                                         /* POP this line after read */ 
                                         pop(&hex_line_q);
-
+                                        
                                         // Next state : File read complete so next state is write to flash
-                                        app.state =  FLASH_WRITE;
+                                        app.state =  APP_EXIT;
                                 } else { // All hex file line adressed file operation done
                                         printf("Nothig in the hex file queue!\n\r");
                                         // Next state
@@ -229,7 +236,7 @@ int main()
                         *********************************************************
                         */
                         case ERROR:
-                                printf("\n\r\n\rState ERROR: Abort !\n\r");
+                                printf("\n\nState ERROR: Abort !\n\n");
                                 goto out_from_loop;
                         break;
 
@@ -241,7 +248,6 @@ int main()
                         *********************************************************
                         */
                         case APP_EXIT:
-                                printf("_-_-_-_-_-_-_ FLASH write successful -_-_-_-_-_-_-_\n\r");
                                goto out_from_loop; 
                         break;
                         
@@ -279,19 +285,28 @@ void decode_incomming_can_data(can_context_type * can  , type_machine_state * ap
                 * If it is a reply of boot flash write
                 */
                 case CAN_START_FLASH_WRITE:
-                        printf("Page Size:      %d\n\r",can->can_data[0]);
+                        flash_wr_info.mcu_page_size = can->can_data[0];
+                        printf("[<--] Page Size: %d\n",flash_wr_info.mcu_page_size);
                         flash_wr_info.bit32_data = can->can_data[2];
                         flash_wr_info.bit32_data = (flash_wr_info.bit32_data << 8);
                         flash_wr_info.bit32_data &= 0xFF00;
                         flash_wr_info.bit32_data |= can->can_data[1];
                         flash_wr_info.curr_mcu_mem_addr  =  flash_wr_info.bit32_data;
-                        printf("MCU Base adress: 0x%x\n\r",flash_wr_info.curr_mcu_mem_addr);
-
-                        app->state = APP_EXIT;   
+                        printf("[<--] MCU Base adress: 0x%x\n",flash_wr_info.curr_mcu_mem_addr);
+                        
+                        /* Application ack get and based on data next state decide */
+                        if(flash_wr_info.mcu_page_size !=0 ){
+                                // If success then read the hex file and further process
+                                app->state = DECODE_HEX_FILE;
+                        } else {
+                                printf("[ ERR ] MCU page size get 0\n"); 
+                                 app->state = ERROR;
+                        }
+                                
                 break;
 
                 default:
-                        printf("ERROR: CAN Message ID Not listed!%x\n\r",can->can_id);
+                        printf("ERROR: CAN Message ID Not listed!%x\n",can->can_id);
                         app->state = ERROR;
                 break;
         }
@@ -341,47 +356,79 @@ void read_file_to_queue(char * file_name , queue * q)
 */
 void each_hex_line_operation(each_hex_line_info_type * each_hex_line_buff)
 {       
+
+        #if EACH_HEX_FILE_LINE_DECOMPOSE_PRINT
+        printf("--------------- Hex line [ %d ] decompose -----------\n", each_hex_line_buff->line_count );
+        printf("Current HEX Line :%s:\n", each_hex_line_buff->whole_line_temp_buff);
+        #endif
+
         /* All temp variables for data conversion */
-        uint8_t temp_rec_length[2] = {};
-        uint8_t temp_address[4] = {};
-        uint8_t rec_type[2] = {};
-        uint8_t check_sum[2] = {};
-
-
+        memset(each_hex_line_buff->temp_rec_length, 0 , 2);
+        memset(each_hex_line_buff->temp_address, 0 , 4);
+        memset(each_hex_line_buff->rec_type, 0 , 2);
+        memset(each_hex_line_buff->data_conv_buff, 0 , 2);
         /*Record length extraction */
         for(int i = REC_LENGTH_START_INDEX , j = 0 ; i< (REC_LENGTH_START_INDEX + REC_LENGTH_LENGTH) ; i++ , j++){
-                 temp_rec_length[j] = each_hex_line_buff->whole_line_temp_buff[i];
+                each_hex_line_buff->temp_rec_length[j] = each_hex_line_buff->whole_line_temp_buff[i];
         }     
-        each_hex_line_buff->data_len = hexadecimalToDecimal(temp_rec_length); // data bytes length
-
+        each_hex_line_buff->data_len = hexadecimalToDecimal(each_hex_line_buff->temp_rec_length); // data bytes length
+        #if EACH_HEX_FILE_LINE_DECOMPOSE_PRINT
+        printf("Record length :%s:[%d]\n", each_hex_line_buff->temp_rec_length , each_hex_line_buff->data_len);
+        #endif
+        
+        
+        
+        
+        memset(each_hex_line_buff->temp_rec_length, 0 , 2);
+        memset(each_hex_line_buff->temp_address, 0 , 4);
+        memset(each_hex_line_buff->rec_type, 0 , 2);
+        memset(each_hex_line_buff->data_conv_buff, 0 , 2);
         /* Adress extraction */
         for(int i = ADDR_START_INDEX , j = 0 ; i<(ADDR_START_INDEX + ADDR_LENGTH) ; i++ , j++){
-                 temp_address[j] = each_hex_line_buff->whole_line_temp_buff[i];
+                 each_hex_line_buff->temp_address[j] = each_hex_line_buff->whole_line_temp_buff[i];
         }
-        each_hex_line_buff->data_start_adress = hexadecimalToDecimal(temp_address); // data bytes length
+        each_hex_line_buff->data_start_adress = hexadecimalToDecimal(each_hex_line_buff->temp_address); // data bytes length
+        #if EACH_HEX_FILE_LINE_DECOMPOSE_PRINT
+        printf("Line Address :%s: [%x]\n", each_hex_line_buff->temp_address , each_hex_line_buff->data_start_adress);
+        #endif
 
+
+        memset(each_hex_line_buff->temp_rec_length, 0 , 2);
+        memset(each_hex_line_buff->temp_address, 0 , 4);
+        memset(each_hex_line_buff->rec_type, 0 , 2);
+        memset(each_hex_line_buff->data_conv_buff, 0 , 2);
         /* Record type extraciton */
         for(int i = REC_TYPE_START_INDEX , j = 0 ; i<(REC_TYPE_START_INDEX + REC_TYPE_LENGTH) ; i++ , j++){
-                 rec_type[j] = each_hex_line_buff->whole_line_temp_buff[i];
+                 each_hex_line_buff->rec_type[j] = each_hex_line_buff->whole_line_temp_buff[i];
         }
-        each_hex_line_buff->data_type = hexadecimalToDecimal(rec_type); // Recod type
+        each_hex_line_buff->data_type = hexadecimalToDecimal(each_hex_line_buff->rec_type); // Recod type
+        #if EACH_HEX_FILE_LINE_DECOMPOSE_PRINT
+        printf("Type :%s: :%d:\n", each_hex_line_buff->rec_type , each_hex_line_buff->data_type);
+        #endif
 
+
+        memset(each_hex_line_buff->temp_rec_length, 0 , 2);
+        memset(each_hex_line_buff->temp_address, 0 , 4);
+        memset(each_hex_line_buff->rec_type, 0 , 2);
+        memset(each_hex_line_buff->data_conv_buff, 0 , 2);
         /* 
                 Data field extraction
                 one byte data meand 2 hex ascii character from line
         */
-        for(int i = DATA_START_INDEX , j = 0 ; i < ( DATA_START_INDEX + ( (each_hex_line_buff->data_len) * 2) ) ; i++ , j++){
-                each_hex_line_buff->data[j] = each_hex_line_buff->whole_line_temp_buff[i];
+        for(int i = DATA_START_INDEX , j = 0 ; i < ( DATA_START_INDEX + ( (each_hex_line_buff->data_len) * 2) ) ; i+=2 , j++){
+                each_hex_line_buff->data_conv_buff[0] = each_hex_line_buff->whole_line_temp_buff[i];
+                each_hex_line_buff->data_conv_buff[1] = each_hex_line_buff->whole_line_temp_buff[i+1];
+                each_hex_line_buff->data[j] = hexadecimalToDecimal(each_hex_line_buff->data_conv_buff);
         }
-
         #if EACH_HEX_FILE_LINE_DECOMPOSE_PRINT
-                printf("--------------- Debug: Hex line decompose -----------");
-                printf("Current HEX Line ::%s\n\r", each_hex_line_buff->whole_line_temp_buff);
-                printf("Record length: %s ::%d\n\r", temp_rec_length , each_hex_line_buff->data_len);
-                printf("Line Address ::%s ::%x\n\r", temp_address , each_hex_line_buff->data_start_adress);
-                printf("Type ::%s ::%d\n\r", rec_type , each_hex_line_buff->data_type);
-                printf("Flash data ::%s\n\r", each_hex_line_buff->data);
-                printf("-----------------------------------------------------\n\r");
+        printf("Type :%s: :%d:\n", each_hex_line_buff->rec_type , each_hex_line_buff->data_type);
+                 printf("Flash data: ");
+                for(int i = 0;  i< each_hex_line_buff->data_len ; i++){
+                        printf("-%d[0x%x]-", each_hex_line_buff->data[i] , each_hex_line_buff->data[i]);
+                }
+                printf("\n");
+        printf("-----------------------------------------------------\n");
         #endif
+        
 }
   
