@@ -18,13 +18,6 @@
 
 
 //*******************  Configuration of bootloader ********************
-#define BOOT_MODE		USB_MODE		// Select the boot mode | Boot over USB or CAN 
-
-
-
-
-
-
 
 
 #define MAX_INCOMMING_STRING_LENGTH  100

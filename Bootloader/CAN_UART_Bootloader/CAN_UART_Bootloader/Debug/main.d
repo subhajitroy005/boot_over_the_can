@@ -153,10 +153,17 @@ main.d main.o: .././main.c ../OTC_Sources/utility_support.h \
  ../hal/include/hpl_flash.h ../hal/include/hpl_irq.h \
  ../hal/include/hal_usart_sync.h ../hal/include/hal_io.h \
  ../hal/include/hpl_usart_sync.h ../hal/include/hpl_usart.h \
- ../hal/include/hal_can_async.h ../hal/include/hpl_can.h \
- ../hal/include/hpl_can_async.h ../hal/utils/include/utils.h \
- ../stdio_start.h ../stdio_redirect/stdio_io.h ../OTC_Sources/config.h \
- ../OTC_Sources/message_id.h
+ ../hal/include/hal_timer.h ../hal/utils/include/utils_list.h \
+ ../hal/include/hpl_timer.h ../hpl/tc/hpl_tc_base.h \
+ ../hal/include/hpl_pwm.h ../hal/include/hal_can_async.h \
+ ../hal/include/hpl_can.h ../hal/include/hpl_can_async.h \
+ ../hal/utils/include/utils.h ../stdio_start.h \
+ ../stdio_redirect/stdio_io.h ../OTC_Sources/config.h \
+ ../OTC_Sources/message_id.h ../OTC_Sources/zen_can_api.h \
+ ../hpl/can/hpl_can_base.h ../Config/hpl_can_config.h \
+ ../Config/peripheral_clk_config.h \
+ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-none-eabi\include\inttypes.h \
+ ../OTC_Sources/zen_message_id.h
 
 ../OTC_Sources/utility_support.h:
 
@@ -540,6 +547,16 @@ C:\Program\ Files\ (x86)\Atmel\Studio\7.0\Packs\atmel\SAMC21_DFP\1.2.176\samc21n
 
 ../hal/include/hpl_usart.h:
 
+../hal/include/hal_timer.h:
+
+../hal/utils/include/utils_list.h:
+
+../hal/include/hpl_timer.h:
+
+../hpl/tc/hpl_tc_base.h:
+
+../hal/include/hpl_pwm.h:
+
 ../hal/include/hal_can_async.h:
 
 ../hal/include/hpl_can.h:
@@ -555,3 +572,15 @@ C:\Program\ Files\ (x86)\Atmel\Studio\7.0\Packs\atmel\SAMC21_DFP\1.2.176\samc21n
 ../OTC_Sources/config.h:
 
 ../OTC_Sources/message_id.h:
+
+../OTC_Sources/zen_can_api.h:
+
+../hpl/can/hpl_can_base.h:
+
+../Config/hpl_can_config.h:
+
+../Config/peripheral_clk_config.h:
+
+c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-none-eabi\include\inttypes.h:
+
+../OTC_Sources/zen_message_id.h:

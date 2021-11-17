@@ -4,6 +4,23 @@
 #include <debug_macros.h>
 #include <data_type_support.h>
 #include <message_id.h>
+#include <zen_can_api.h>
+#include <zen_message_id.h>
+
+
+/*##################################################*/
+#define MAX_FLASH_PAGE_SIZE_IN_BYTE     128
+#define APP_START_BASE_ADDRESS          (0xE000)	//start app from 0xE000
+#define BOOT_LOADER_TIMEOUT		2000		// mS
+#define BOOT_MODE			USB_MODE	// Select the boot mode | Boot over USB or CAN
+/*##################################################*/
+
+
+
+
+
+
+
 
 
 
@@ -11,91 +28,18 @@
 can_context_type		can;
 flash_wr_info_type		flash_write_info;
 
+static struct timer_task	time_counts_events;
 
 
-
-
-/*##################################################
- * CAN related data
-
-##################################################*/
-#define CAN_DATA_LENGTH_IN_PACKET       8 
-
-enum com_standard{
-	CAN_TXN_ERROR = 0,
-	CAN_TXN_QUERY,
-	CAN_TXN_ACK
-};
-
-
-
-/*##################################################*/
-#define MAX_FLASH_PAGE_SIZE_IN_BYTE     128
-#define APP_START_BASE_ADDRESS          (0xE000) //start app from 0xE000      
-
-
-#define BOOTLOADER_EVENT_PRINT_ENABLE           0
-#define CAN_SERIAL_DATA_RECV_DECOMPOSE_PRINT    0
-
-
-
-
-
-
-
-
-
-
-
-/*
- * Serial TXN related data
-*/
-struct _serial_read_info{
-    uint8_t         recv_char_buff[1];          // Temp store byte data from a whole UART data stream
-    int             serial_buff_size;       // track the index of serial incoming string
-    uint8_t         uart_frame_received;    // Flag is set after the frame is processed and 
-    uint8_t         recv_serial_frame[50];      // The complete frame without t and \r
-    // For data conversion temp buffer
-    uint8_t serial_recv_can_id_temp[3];
-    uint8_t serial_recv_can_len_temp[1];
-    uint8_t serial_recv_can_data_temp[2];       // for can data ascii string to byte conv
-}serial_read_data;
-
-struct _serial_write_info{
-    // Serial String Format tiiildddd..dd\n | max data is the 23 byte
-        uint8_t        temp_id_buff[3];
-        uint8_t        temp_id_copy_buffer[3];
-        uint8_t        temp_data_buff[2];
-        uint8_t        uart_tx_frame_buff[50]; // max write will be 23
-}serial_write_data;
-
-
-
-/*Serial Related data */
-
-// Each serial line segmentation vars
-
-
-
-
-
-/*
- * FLASH Memory related info
- */
-
-
-
-
-
-
-
-
-
-uint8_t page_byte_byff[MAX_FLASH_PAGE_SIZE_IN_BYTE];
 uint32_t page_size = 255;
+int timer_event_occured = 0;
+int can_rx_event_occured = 0;
+uint32_t temp_32bit_data =0;
 
-
-
+union bit_to_arr{
+	uint8_t byte_arr[4];
+	uint32_t bit32_data;	
+}bit_to_arr_conv;
 
 //------------------------------------------------------------------------------------
 void write_array_data_to_flash(uint8_t * data , int page_size , uint32_t abs_adress);
@@ -106,9 +50,19 @@ void read_serial_data();
 void send_serial_data();
 void decode_can_data();
 
+void jump_to_application();
 /* Application call */
 
+/* ISR calls */
+void isr_timer_0_call()
+{
+	timer_event_occured = 1;	
+}
 
+void isr_can_0_rx_call()
+{
+	can_rx_event_occured = 0;
+}
 
 
 //------------------------------------------------------------------------------------
@@ -116,41 +70,32 @@ void decode_can_data();
 int main(void)
 {
 	atmel_start_init();
-   
-	/* Machine states data */
-    
-	// hold the can data
-    /*All init section  ===========================*/
-    
-    
-    
-    
-    
-     
-   /* // Flash write section example
-    int page_size;
-    uint8_t src_data[200];
-    int adress = 0xa400; // starting adress for write 
-    for (i = 0; i < page_size; i++) {
-		src_data[i] = i;
-	}
-	page_size = get_flash_page_size();
-	write_array_data_to_flash(src_data , &page_size , &adress);
-    int flash_write_check_flag = check_flash_data_array(src_data , &page_size , &adress);
-    printf("Flash Write status %d\n\r",flash_write_check_flag);
-    
-    */
-    flash_write_info.curr_flash_write_addr = APP_START_BASE_ADDRESS;
-    serial_read_data.uart_frame_received = 0;
-    can.can_id = -1;
-    
-    
-    
-	/* Reset the variables */
-	flash_write_info.flash_wr_buffer_index = 0; // reset after every page write
-	flash_write_info.page_byte_seq = 0;
 	
-	app.state = INIT;    
+	/*------------------------ peripheral init ----------------*/
+	//TIMER 0 -> Toggle ejector operation
+	time_counts_events.cb     = isr_timer_0_call; // ISR function registration
+	time_counts_events.mode   = TIMER_TASK_REPEAT;
+	time_counts_events.time_label = 0;
+	timer_add_task(&TIMER_0, &time_counts_events);
+	
+	//CAN 1 -> CAN communication
+	can_begin(&CAN_1 , CAN1 , 500 , 73);	// Initialize the CAN0 instance at 500 kbps
+	can_set_rxcb(&CAN_1 , (FUNC_PTR)isr_can_0_rx_call);	// Set the can rx callback function
+	can_set_filter(&CAN_1 , 0 , 0 , STD_ID);	// Set the filter for receiving all the message
+	can_busoff_set_cb(&CAN_1); // Bus off condition
+	
+	
+	/* Reset the variables */
+	flash_write_info.curr_flash_write_addr	= APP_START_BASE_ADDRESS;
+	flash_write_info.flash_wr_buffer_index	= 0; // reset after every page write
+	flash_write_info.page_byte_seq		= 0;
+	can.can_id				= -1;
+	
+	/* Start app state */
+	app.state = INIT;
+	/* Start the timer for boot-loader timeout */
+	time_counts_events.interval = BOOT_LOADER_TIMEOUT;
+	//timer_start(&TIMER_0); 
 	while (1) {
 		switch(app.state){
 			case INIT:
@@ -187,6 +132,15 @@ int main(void)
 			default:
 				app.state = SERIAL_CAN_READ; // Always listen to programmer
 			break;
+		}
+		
+		/*
+		* Check for timer events
+		* It it happens that means no program upload so jump to application 
+		*/
+		if(timer_event_occured){
+			timer_event_occured = 0;
+			jump_to_application();
 		}
 	}
 }
@@ -276,10 +230,12 @@ void decode_can_data()
 			can.can_id = CAN_SEND_PAGE_COMPLETE;
 			can.can_data[0] = ret;
 			can.can_data[1] = flash_write_info.flash_wr_buffer_index; // number of byte written
-			flash_write_info.temp_32bit_data = flash_write_info.curr_flash_write_addr;
-			can.can_data[2] = (uint8_t)flash_write_info.temp_32bit_data;
-			can.can_data[3] = (uint8_t)(flash_write_info.temp_32bit_data >> 8);
-			can.len = 4;
+			bit_to_arr_conv.bit32_data = flash_write_info.curr_flash_write_addr;
+			can.can_data[2] = bit_to_arr_conv.byte_arr[0];
+			can.can_data[3] = bit_to_arr_conv.byte_arr[1];
+			can.can_data[4] = bit_to_arr_conv.byte_arr[2];
+			can.can_data[5] = bit_to_arr_conv.byte_arr[3];
+			can.len = 6;
 			can_write(&can);
 			
 			
@@ -306,6 +262,32 @@ void decode_can_data()
         break;
 	
 	/*
+         * Flash write req from host application
+         * Send ack of write status
+         * byte[0] = write req bit
+        */  
+	case CAN_SEND_EXT_SEG_ADDR:
+		temp_32bit_data = 0;
+		temp_32bit_data = ( ( (can.can_data[0]<<8) & 0xff00 ) | ( (can.can_data[1]) & 0xff) );
+		/* Update data record adress */
+		flash_write_info.curr_flash_write_addr = (temp_32bit_data*16);
+		
+		
+		bit_to_arr_conv.bit32_data = flash_write_info.curr_flash_write_addr;
+		can.can_data[0] = bit_to_arr_conv.byte_arr[0];
+		can.can_data[1] = bit_to_arr_conv.byte_arr[1];
+		can.can_data[2] = bit_to_arr_conv.byte_arr[2];
+		can.can_data[3] = bit_to_arr_conv.byte_arr[3];
+		
+		can.can_id = CAN_SEND_EXT_SEG_ADDR;
+		can.len = 4;
+		can_write(&can);
+		
+		/* Next byte is to read the can data  */
+		app.state = SERIAL_CAN_READ;
+	break;
+	
+	/*
          * Application reset req
          * Send ack of write status
          * byte[0] = write req bit
@@ -318,9 +300,8 @@ void decode_can_data()
 			can_write(&can);
 			delay_ms(500);
 			/* Jump to application */
-			
-			void (* app_call)(void) = (void*)(*(volatile uint32_t *)(APP_START_BASE_ADDRESS+4));
-			app_call();	
+			jump_to_application();
+				
 		} else {
 			can.can_id = CAN_SENT_FLASH_WRITE_ERROR;
 			can.can_data[0] = 0;
@@ -337,7 +318,20 @@ void decode_can_data()
         break;
     }   
 }
-
+void jump_to_application()
+{	
+	/* Deinit all the peripherals */
+	flash_deinit(&FLASH_0);
+	can_async_deinit(&CAN_1);
+	timer_deinit(&TIMER_0);
+	usart_sync_deinit(&TARGET_IO);
+	
+	
+	
+	/* Jump to the application reset handler */
+	void (* app_call)(void) = (void*)(*(volatile uint32_t *)(APP_START_BASE_ADDRESS+4));
+	app_call();
+}
 /*
 ################################################
 * Function:             write_array_data_to_flash

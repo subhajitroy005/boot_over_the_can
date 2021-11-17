@@ -19,12 +19,15 @@ queue                   hex_line_q;             // Queu operation for hex file l
 flash_wr_info_type      flash_wr_info;          // Flash write operation structure
 each_hex_line_info_type each_hex_line_buff;     // Hold the info from each hex line decode
 
-
+union bit_to_arr{
+	uint8_t byte_arr[4];
+	uint32_t bit32_data;	
+}bit_to_arr_conv;
 
 
 //--------------- Individual data filed buffer _
 //char *portname = "/dev/ttyACM0"; // For linux 
-char *portname = "COM5"; // For windows
+char *portname = "COM6"; // For windows
 char* global_hex_file_name = "abc.hex";
 
 
@@ -53,14 +56,16 @@ void decode_incomming_can_data(can_context_type * can ,type_machine_state * app)
 
 
 /* MAIN ____________________________________________________________________________*/
-int main()
+int main(int argc, char *argv[])
 {       
+        
+
+        
+        portname = argv[1];
+        global_hex_file_name = argv[2];
         can_rw.can_serial_port = portname;
         flash_wr_info.curr_hex_line_adress = 0;
         flash_wr_info.curr_mcu_mem_addr = 0;
-
-
-
 
         /*
         * Start the execution from INIT
@@ -83,6 +88,7 @@ int main()
                                 */
                                 printf("-------------------\n");
                                 printf("Over Ther CAN V 1.0\n");
+                                printf("Support @ subhajtroy005@gmail.com\n");
                                 printf("-------------------\n\r");
                                 /*
                                 * Init the can communication through the serial
@@ -138,6 +144,9 @@ int main()
                         *********************************************************
                         */
                         case START_BOOT_FLASH_WRITE:
+                                /* Send sw reset  */
+
+                                /* Start uploading bootloader */
                                 can_rw.can_id = CAN_START_FLASH_WRITE;
                                 can_rw.can_data[0] = CAN_TXN_QUERY; // send a query
                                 can_rw.len = 1;
@@ -278,6 +287,17 @@ int main()
                                         break;
 
                                         case 2: // Extended seg adress
+                                                /* Send extended segment address */
+                                                can_rw.can_id = CAN_SEND_EXT_SEG_ADDR;
+		                                can_rw.can_data[0] =  each_hex_line_buff.data[0];
+		                                can_rw.can_data[1] =  each_hex_line_buff.data[1];
+                                                printf("[-->] EXT segment adress sent [0x %x-%x]\n",each_hex_line_buff.data[0],each_hex_line_buff.data[1]);
+                                                can_rw.len =2;
+                                                can_write(&can_rw);
+                                                
+                                                /* Next state read the ack */
+
+                                                app.state = READ_SERIAL_CAN_DATA;
                                         break;
 
                                         case 3: // Start segment adress
@@ -403,19 +423,19 @@ void decode_incomming_can_data(can_context_type * can  , type_machine_state * ap
 
                 case CAN_SEND_PAGE_COMPLETE:
                         /* Page write ack from MCU */
-                        if(can->can_data[0]){ // page write successful so decode next line and send
+                        if(can->can_data[0]) { // page write successful so decode next line and send
                                 printf("*");
                                 /* MCU send infomations */
                                 printf("    [Bytes %d]",can->can_data[1]);// number of bytes written
-                                flash_wr_info.bit32_data = can->can_data[3];
-                                flash_wr_info.bit32_data = (flash_wr_info.bit32_data << 8);
-                                flash_wr_info.bit32_data &= 0xFF00;
-                                flash_wr_info.bit32_data |= can->can_data[2];
-                                flash_wr_info.curr_mcu_mem_addr  =  flash_wr_info.bit32_data;
-                                printf("[Address: 0x%x]",flash_wr_info.curr_mcu_mem_addr);
+                                bit_to_arr_conv.byte_arr[0] = can->can_data[2];
+                                bit_to_arr_conv.byte_arr[1] = can->can_data[3];
+                                bit_to_arr_conv.byte_arr[2] = can->can_data[4];
+                                bit_to_arr_conv.byte_arr[3] = can->can_data[5];
+                                 flash_wr_info.curr_mcu_mem_addr =  bit_to_arr_conv.bit32_data;
+                                printf("    [Address: 0x%x]",flash_wr_info.curr_mcu_mem_addr);
                                 /* Line percentage calculation */
-                                int complete_percent = (int)(((float)each_hex_line_buff.line_count / (float)each_hex_line_buff.total_line_count) * 100); 
-                                printf("   [%d percent done!]\n", complete_percent);
+                                float complete_percent = (float)((each_hex_line_buff.line_count / (float)each_hex_line_buff.total_line_count) * 100.f); 
+                                printf("   [%.2f %c]\n", complete_percent, '%');
                                 app->state = DECODE_HEX_FILE;
 
                         } else {
@@ -423,6 +443,23 @@ void decode_incomming_can_data(can_context_type * can  , type_machine_state * ap
                                 app->state = ERROR; 
                         }
                 break;
+
+                case CAN_SEND_EXT_SEG_ADDR:
+                       
+                        bit_to_arr_conv.byte_arr[0] = can->can_data[0];
+                        bit_to_arr_conv.byte_arr[1] = can->can_data[1];
+                        bit_to_arr_conv.byte_arr[2] = can->can_data[2];
+                        bit_to_arr_conv.byte_arr[3] = can->can_data[3];
+
+                        //temp_32bit_data = ( ((can->can_data[3]<<24) & 0xFF000000) | ((can->can_data[2]<<16) & 0xFF0000) | ((can->can_data[1]<<8) & 0xFF00) | (can->can_data[0] & 0xFF) );
+                        flash_wr_info.curr_mcu_mem_addr =  bit_to_arr_conv.bit32_data;
+
+                        printf("[<--] MCU Extended segment adress ACK  [0x%x]\n", flash_wr_info.curr_mcu_mem_addr);
+                        /* next state decode hex file */
+                        app->state = DECODE_HEX_FILE;
+                break;
+
+
 
                 case CAN_SEND_JUMP_TO_APP:
                         if(can->can_data[0]){

@@ -28,6 +28,8 @@ hal\src\hal_io.c
 
 hal\src\hal_sleep.c
 
+hal\src\hal_timer.c
+
 hal\src\hal_usart_sync.c
 
 hal\utils\src\utils_assert.c
@@ -61,6 +63,8 @@ hpl\oscctrl\hpl_oscctrl.c
 hpl\pm\hpl_pm.c
 
 hpl\sercom\hpl_sercom.c
+
+hpl\tc\hpl_tc.c
 
 main.c
 
