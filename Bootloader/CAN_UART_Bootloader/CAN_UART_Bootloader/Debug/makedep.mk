@@ -72,6 +72,8 @@ OTC_Sources\can_driver.c
 
 OTC_Sources\utility_support.c
 
+OTC_Sources\zen_can_api.c
+
 stdio_redirect\gcc\read.c
 
 stdio_redirect\gcc\write.c

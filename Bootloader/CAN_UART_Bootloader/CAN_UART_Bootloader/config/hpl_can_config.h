@@ -40,7 +40,7 @@
 // <3=> Critical latency
 // <id> can_mrcfg_dqos
 #ifndef CONF_CAN1_MRCFG_DQOS
-#define CONF_CAN1_MRCFG_DQOS 0
+#define CONF_CAN1_MRCFG_DQOS 2
 #endif
 
 // </h>
@@ -138,7 +138,7 @@
 // <i> Number of Rx FIFO 0 element
 // <id> can_rxf0c_f0s
 #ifndef CONF_CAN1_RXF0C_F0S
-#define CONF_CAN1_RXF0C_F0S 2
+#define CONF_CAN1_RXF0C_F0S 64
 #endif
 
 // <o> Data Field Size
@@ -169,7 +169,7 @@
 // <i> Number of Tx Buffers used for Tx FIFO
 // <id> can_txbc_tfqs
 #ifndef CONF_CAN1_TXBC_TFQS
-#define CONF_CAN1_TXBC_TFQS 2
+#define CONF_CAN1_TXBC_TFQS 32
 #endif
 
 // <o> Tx Buffer Data Field Size

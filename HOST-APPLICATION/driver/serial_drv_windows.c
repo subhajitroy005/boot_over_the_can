@@ -19,7 +19,7 @@ void config_serial_port(char* port_name)
                               0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
         
         if(serial_io_reference == NULL){ // If it is null then problem with serial
-                printf("[SERIAL DRV][ ERR ] Opening serial poart!\n");
+                printf("[SERIAL DRV INIT][ ERR ] Opening serial poart!\n");
                 exit(EXIT_FAILURE);
         }
 
@@ -41,14 +41,14 @@ void config_serial_port(char* port_name)
 	serial_io_dcbSerialParams.dcb.fAbortOnError       = TRUE;
 
 	if (!SetCommState(serial_io_reference, &serial_io_dcbSerialParams.dcb)){
-		printf("[SERIAL DRV][ ERR ] setting serial port config!\n");
+		printf("[SERIAL DRV INIT][ ERR ] setting serial port config!\n");
 	}
 
         /* Setting serial timeout parameters */
         
         GetCommTimeouts(serial_io_reference , &serial_io_time_out );
 
-	serial_io_time_out.ReadIntervalTimeout          = 50;
+	serial_io_time_out.ReadIntervalTimeout          = 20;
 	serial_io_time_out.ReadTotalTimeoutConstant     = 50;
 	serial_io_time_out.ReadTotalTimeoutMultiplier   = 10;
 	serial_io_time_out.WriteTotalTimeoutConstant    = 50;
@@ -56,17 +56,17 @@ void config_serial_port(char* port_name)
 
 	if(!SetCommTimeouts(serial_io_reference, &serial_io_time_out)) 
 	{
-		printf("[SERIAL DRV][ ERR ] Setting serial port timeout!\n");
+		printf("[SERIAL DRV INIT][ ERR ] Setting serial port timeout!\n");
 	}
 
         /* Set the event mask */
         event_mask = 1;
         if(!SetCommMask(serial_io_reference, event_mask)){
-                printf("[SERIAL DRV][ ERR ] Setting serial event mask!\n");
+                printf("[SERIAL DRV INIT][ ERR ] Setting serial event mask!\n");
         }
         //GetCommMask(serial_io_reference, &event_mask); // not require to check here
 
-        printf("[SERIAL DRV][ OK ] Serial connection\n");
+        printf("[SERIAL DRV INIT][ OK ] Serial connection\n");
 }
 
 
@@ -84,12 +84,12 @@ void write_serial_string(char* string_data)
 	int byte_written = 0;
 
         #if OUTGOING_SERIAL_DRIVER_PRINT
-                printf("[SERIAL DRV] Write  :%s: len->:%d:\n",string_data, strlen(string_data));
+                printf("[SERIAL DRV WR] Write  :%s: len->:%d:\n",string_data, strlen(string_data));
         #endif
 
 
 	if(!WriteFile(serial_io_reference, serial_write_buff, byte_to_write, &dwBytesWritten, NULL)){ 
-		printf("[SERIAL DRV][ ERR ] Write -> Written %d out of %d\n",byte_written, byte_to_write);
+		printf("[SERIAL DRV WR][ ERR ] Write -> Written %d out of %d\n",byte_written, byte_to_write);
 	}
 }
 
@@ -106,7 +106,7 @@ void read_serial_string(uint8_t * buffer)
         
 
         #if INCOMMING_SERIAL_DRIVER_PRINT
-        printf("[SERIAL DRV] Read  :%s: len->%d\n",serial_read_buff, strlen(serial_read_buff));
+        printf("[SERIAL DRV RD] Read str  :%s: len->%d\n",serial_read_buff, strlen(serial_read_buff));
         #endif
 
 	/* Extract the actual data from start and terminatoin character */	
@@ -131,7 +131,7 @@ void read_serial_string(uint8_t * buffer)
            }
         
         #if INCOMMING_SERIAL_DRIVER_PRINT
-        printf("[SERIAL DRV] Extracted read  :%s: len->:%d:\n", buffer , strlen(buffer));
+        printf("[SERIAL DRV RD] Extracted read  :%s: len->:%d:\n", buffer , strlen(buffer));
         #endif
         
 }

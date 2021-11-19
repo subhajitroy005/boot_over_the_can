@@ -1,0 +1,13 @@
+*.o
+*.out
+*.map
+*.hex
+*.bat
+*.lss
+*.exe
+*.d
+*.srec
+*.elf
+*.bin
+*.eep
+*.log

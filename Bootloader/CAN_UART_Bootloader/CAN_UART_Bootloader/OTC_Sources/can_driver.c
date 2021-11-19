@@ -30,9 +30,22 @@ uint8_t rx_buffer[MAX_INCOMMING_STRING_LENGTH] = {0};
 uint8_t rx_buff_index = 0;
 
 
-void can_init(const can_context_type * can)
+can_frame_type can_rx_frame;
+can_frame_type can_tx_frame;
+int message_id, len;
+uint8_t            can_data[64];
+
+
+
+void can_init(struct can_async_descriptor * descr, void *const hw , FUNC_PTR cb , unsigned int baud_rate)
 {
-       usart_sync_get_io_descriptor(&TARGET_IO, &serial_io);	// Get the descriptor
+	/* Init uart here */
+	usart_sync_get_io_descriptor(&TARGET_IO, &serial_io);	// Get the descriptor
+       
+	//CAN 1 -> CAN communication
+	can_begin(&CAN_1 , CAN1 , 500 , 73);	// Initialize the CAN0 instance at 500 kbps
+	can_set_rxcb(&CAN_1 , cb );	// Set the can rx callback function
+	can_set_filter(&CAN_1 , 0 , 0 , STD_ID);	// Set the filter for receiving all the message
 }
 
 
@@ -44,11 +57,17 @@ void can_write(can_context_type * can)
 	*/
 	#if (BOOT_MODE == CAN_MODE)
 	
+	message_id = can->can_id;
+	len = can->len;
+	for(int i=0; i< len ; i++){
+		can_tx_frame.data[i] = 	can->can_data[i];
+	}
 	
+	can_send(&CAN_1 , message_id, STD_ID , len , can_tx_frame);
 	
-	
-	
-	
+	#if OUTGOING_CAN_DRIVER_PRINT
+	printf("[CAN DRV] WR ID [%x]\n",message_id);
+	#endif
 	/*	--------------------------------------
 		Communication mode is USB Serial 
 		--------------------------------------
@@ -175,9 +194,25 @@ int can_read(can_context_type * can)
 	#if (BOOT_MODE == CAN_MODE)
 	
 	
+	can_receive(&CAN_1 , &message_id , &can_rx_frame , &len); // Receive Incoming Data into rx frame and id
+	
+	can->can_id = message_id;
+	can->len = len;
+	
+	for(int i =0 ; i<len ; i++ ){
+		can->can_data[i] = can_rx_frame.data[i];	
+	}
+	
+	
+	#if INCOMMING_CAN_DRIVER_PRINT
+	printf("[CAN DRV] RD ID [%x]!\n",can->can_id);
+	#endif
 	
 	
 	
+	
+	
+	return 1;
 	
 	/*	--------------------------------------
 		Communication mode is USB Serial 

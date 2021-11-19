@@ -10,6 +10,7 @@
 #include <config.h>
 #include <data_type_support.h>
 #include <queue.h>
+#include "zen_message_id.h"
 
 /* Variable Declaraation ___________________________________________________________*/
 int                     i;                      // Global index purpose                                          
@@ -29,8 +30,9 @@ union bit_to_arr{
 //char *portname = "/dev/ttyACM0"; // For linux 
 char *portname = "COM6"; // For windows
 char* global_hex_file_name = "abc.hex";
-
-
+int can_node;
+int reset_node_id;
+int reset_req;
 
 
 
@@ -66,6 +68,61 @@ int main(int argc, char *argv[])
         can_rw.can_serial_port = portname;
         flash_wr_info.curr_hex_line_adress = 0;
         flash_wr_info.curr_mcu_mem_addr = 0;
+        can_node = atoi(argv[3]);
+        reset_req = atoi(argv[4]);
+        printf("NODE Selected: %d\n",can_node);
+        /* Reset node ID*/
+        switch(can_node){
+                case 1:
+                        reset_node_id = 0;
+                break;
+                case 2:
+                        reset_node_id = 0x8B;
+                break;
+                case 3:
+                        reset_node_id = 0xC6;
+                break;
+                case 4:
+                        reset_node_id = 0x107;
+                break;
+                case 5:
+                        reset_node_id = 0x14D;
+                break;
+                case 6:
+                        reset_node_id = 0x18D;
+                break;
+                case 7:
+                        reset_node_id = 0x1CD;
+                break;
+                case 8:
+                        reset_node_id = 0x20D;
+                break;
+                case 9:
+                        reset_node_id = 0x24D;
+                break;
+                case 10:
+                        reset_node_id = 0x28D;
+                break;
+                case 11:
+                        reset_node_id = 0x2CD;
+                break;
+                case 12:
+                        reset_node_id = 0x30D;
+                break;
+                case 13:
+                        reset_node_id = 0x34D;
+                break;
+                case 14:
+                        reset_node_id = 0x789;
+                break;
+                case 15:
+                        reset_node_id = 0x7C9;
+                break;
+
+                default:
+                break;
+        } 
+
 
         /*
         * Start the execution from INIT
@@ -130,7 +187,10 @@ int main(int argc, char *argv[])
                                 read_file_to_queue(global_hex_file_name , &hex_line_q); // Read all the file 
 
                                 // Next state
-                                app.state = START_BOOT_FLASH_WRITE;
+                                if(reset_req)
+                                        app.state = SEND_RESET;
+                                else 
+                                        app.state = START_BOOT_FLASH_WRITE;
                         break;
 
 
@@ -143,15 +203,27 @@ int main(int argc, char *argv[])
                         *                       of MCU.
                         *********************************************************
                         */
-                        case START_BOOT_FLASH_WRITE:
-                                /* Send sw reset  */
+                        case SEND_RESET:
+                                /* Send sw reset */
+                                printf("Node id [ %d ] Reset Requested !\n",can_node);
+                                can_rw.can_id = reset_node_id;
+                                can_rw.can_data[0] = CAN_TXN_QUERY; // send a query
+                                can_rw.len = 1;
+                                can_write(&can_rw);
+                                /* Sleep 1 sec fo go to booloader mode */
+                                
+                                app.state = READ_SERIAL_CAN_DATA;
+                                
+                        break;
 
+                        case START_BOOT_FLASH_WRITE:
+                                sleep(1);
                                 /* Start uploading bootloader */
                                 can_rw.can_id = CAN_START_FLASH_WRITE;
                                 can_rw.can_data[0] = CAN_TXN_QUERY; // send a query
                                 can_rw.len = 1;
                                 can_write(&can_rw);
-                                printf("[-->] Boot flash write requested !\n\r");
+                                printf("[-->] Boot flash write requested !\n");
 
                                 // Next state
                                 app.state = READ_SERIAL_CAN_DATA;
@@ -416,7 +488,7 @@ void decode_incomming_can_data(can_context_type * can  , type_machine_state * ap
                                 app->state = FLASH_WRITE;
                                 printf(">"); 
                         } else {
-                                printf("[<--] MCU data packer seq mismatch\n");
+                                printf("[<--] MCU data packet seq mismatch\n");
                                 app->state = ERROR;
                         }
                 break;
@@ -476,9 +548,30 @@ void decode_incomming_can_data(can_context_type * can  , type_machine_state * ap
                         app->state = ERROR;
                 break;
 
+
+
+
+                /* Read reset replys */
+                case EJC_MCU_RST_FB_1:
+                        app->state = START_BOOT_FLASH_WRITE;
+                break;
+
+                case EJC_MCU_RST_FB_2:
+                        app->state = START_BOOT_FLASH_WRITE;
+                break;
+
+                case EJC_MCU_RST_FB_3:
+                        app->state = START_BOOT_FLASH_WRITE;
+                break;
+
+                case EJC_MCU_RST_FB_4:
+                        app->state = START_BOOT_FLASH_WRITE;
+                break;
+
+
                 default:
-                        printf("[<--]ERROR: CAN Message ID Not listed! [ 0x%x ]\n",can->can_id);
-                        app->state = ERROR;
+                        //printf("[<--]ERROR: CAN Message ID Not listed! [ 0x%x ]\n",can->can_id);
+                        app->state = READ_SERIAL_CAN_DATA;
                 break;
         }
 }

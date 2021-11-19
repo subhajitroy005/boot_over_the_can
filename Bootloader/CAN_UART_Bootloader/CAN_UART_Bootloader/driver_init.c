@@ -33,23 +33,23 @@ void FLASH_0_init(void)
 void TARGET_IO_PORT_init(void)
 {
 
-	gpio_set_pin_function(PB10, PINMUX_PB10D_SERCOM4_PAD2);
+	gpio_set_pin_function(PC12, PINMUX_PC12C_SERCOM7_PAD0);
 
-	gpio_set_pin_function(PB11, PINMUX_PB11D_SERCOM4_PAD3);
+	gpio_set_pin_function(PC15, PINMUX_PC15C_SERCOM7_PAD3);
 }
 
 void TARGET_IO_CLOCK_init(void)
 {
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM4_GCLK_ID_CORE, CONF_GCLK_SERCOM4_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
-	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM4_GCLK_ID_SLOW, CONF_GCLK_SERCOM4_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM7_GCLK_ID_CORE, CONF_GCLK_SERCOM7_CORE_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
+	hri_gclk_write_PCHCTRL_reg(GCLK, SERCOM7_GCLK_ID_SLOW, CONF_GCLK_SERCOM7_SLOW_SRC | (1 << GCLK_PCHCTRL_CHEN_Pos));
 
-	hri_mclk_set_APBCMASK_SERCOM4_bit(MCLK);
+	hri_mclk_set_APBDMASK_SERCOM7_bit(MCLK);
 }
 
 void TARGET_IO_init(void)
 {
 	TARGET_IO_CLOCK_init();
-	usart_sync_init(&TARGET_IO, SERCOM4, (void *)NULL);
+	usart_sync_init(&TARGET_IO, SERCOM7, (void *)NULL);
 	TARGET_IO_PORT_init();
 }
 

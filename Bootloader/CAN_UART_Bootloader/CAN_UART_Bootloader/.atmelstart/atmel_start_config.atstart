@@ -606,7 +606,7 @@ drivers:
       domain_group: null
   TARGET_IO:
     user_label: TARGET_IO
-    definition: Atmel:SAMC21N_Drivers:0.0.1::SAMC21N18A-AN::SERCOM4::driver_config_definition::UART::HAL:Driver:USART.Sync
+    definition: Atmel:SAMC21N_Drivers:0.0.1::SAMC21N18A-AN::SERCOM7::driver_config_definition::UART::HAL:Driver:USART.Sync
     functionality: USART
     api: HAL:Driver:USART_Sync
     configuration:
@@ -623,7 +623,7 @@ drivers:
       usart_arch_sampa: 7-8-9 (3-4-5 8-bit over-sampling)
       usart_arch_sampr: 16x arithmetic
       usart_arch_sfde: false
-      usart_baud_rate: 115200
+      usart_baud_rate: 256000
       usart_character_size: 8 bits
       usart_parity: No parity
       usart_rx_enable: true
@@ -631,13 +631,13 @@ drivers:
       usart_tx_enable: true
     optional_signals: []
     variant:
-      specification: TXPO=1, RXPO=3, CMODE=0
+      specification: TXPO=0, RXPO=3, CMODE=0
       required_signals:
-      - name: SERCOM4/PAD/2
-        pad: PB10
+      - name: SERCOM7/PAD/0
+        pad: PC12
         label: TX
-      - name: SERCOM4/PAD/3
-        pad: PB11
+      - name: SERCOM7/PAD/3
+        pad: PC15
         label: RX
     clocks:
       domain_group:
@@ -710,14 +710,14 @@ drivers:
       can_ie_ea: false
       can_ie_ep: false
       can_ie_ew: false
-      can_mrcfg_dqos: Background (no sensitive operation)
+      can_mrcfg_dqos: Sensitive latency
       can_mrcfg_runstandby: false
       can_rxesc_f0ds: 8 byte data field.
       can_rxf0c_f0om: blocking mode
-      can_rxf0c_f0s: 2
+      can_rxf0c_f0s: 64
       can_rxf0c_f0wm: 0
       can_sidfc_lss: 2
-      can_txbc_tfqs: 2
+      can_txbc_tfqs: 32
       can_txefc_efs: 2
       can_txefc_efwm: 0
       can_txesc_tbds: 8 byte data field.
@@ -749,18 +749,6 @@ drivers:
         configuration:
           can_gclk_selection: Generic clock generator 0
 pads:
-  PB10:
-    name: PB10
-    definition: Atmel:SAMC21N_Drivers:0.0.1::SAMC21N18A-AN::pad::PB10
-    mode: Peripheral IO
-    user_label: PB10
-    configuration: null
-  PB11:
-    name: PB11
-    definition: Atmel:SAMC21N_Drivers:0.0.1::SAMC21N18A-AN::pad::PB11
-    mode: Peripheral IO
-    user_label: PB11
-    configuration: null
   PB14:
     name: PB14
     definition: Atmel:SAMC21N_Drivers:0.0.1::SAMC21N18A-AN::pad::PB14
@@ -772,6 +760,18 @@ pads:
     definition: Atmel:SAMC21N_Drivers:0.0.1::SAMC21N18A-AN::pad::PB15
     mode: Peripheral IO
     user_label: PB15
+    configuration: null
+  PC12:
+    name: PC12
+    definition: Atmel:SAMC21N_Drivers:0.0.1::SAMC21N18A-AN::pad::PC12
+    mode: Peripheral IO
+    user_label: PC12
+    configuration: null
+  PC15:
+    name: PC15
+    definition: Atmel:SAMC21N_Drivers:0.0.1::SAMC21N18A-AN::pad::PC15
+    mode: Peripheral IO
+    user_label: PC15
     configuration: null
 toolchain_options: []
 static_files: []

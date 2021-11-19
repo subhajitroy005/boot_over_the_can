@@ -101,6 +101,7 @@ C_SRCS +=  \
 ../main.c \
 ../OTC_Sources/can_driver.c \
 ../OTC_Sources/utility_support.c \
+../OTC_Sources/zen_can_api.c \
 ../stdio_redirect/gcc/read.c \
 ../stdio_redirect/gcc/write.c \
 ../stdio_redirect/stdio_io.c \
@@ -149,6 +150,7 @@ hpl/tc/hpl_tc.o \
 main.o \
 OTC_Sources/can_driver.o \
 OTC_Sources/utility_support.o \
+OTC_Sources/zen_can_api.o \
 stdio_redirect/gcc/read.o \
 stdio_redirect/gcc/write.o \
 stdio_redirect/stdio_io.o \
@@ -190,6 +192,7 @@ hpl/tc/hpl_tc.o \
 main.o \
 OTC_Sources/can_driver.o \
 OTC_Sources/utility_support.o \
+OTC_Sources/zen_can_api.o \
 stdio_redirect/gcc/read.o \
 stdio_redirect/gcc/write.o \
 stdio_redirect/stdio_io.o \
@@ -231,6 +234,7 @@ hpl/tc/hpl_tc.d \
 main.d \
 OTC_Sources/can_driver.d \
 OTC_Sources/utility_support.d \
+OTC_Sources/zen_can_api.d \
 stdio_redirect/gcc/read.d \
 stdio_redirect/gcc/write.d \
 stdio_redirect/stdio_io.d \
@@ -272,6 +276,7 @@ hpl/tc/hpl_tc.d \
 main.d \
 OTC_Sources/can_driver.d \
 OTC_Sources/utility_support.d \
+OTC_Sources/zen_can_api.d \
 stdio_redirect/gcc/read.d \
 stdio_redirect/gcc/write.d \
 stdio_redirect/stdio_io.d \
@@ -532,6 +537,13 @@ OTC_Sources/can_driver.o: ../OTC_Sources/can_driver.c
 	
 
 OTC_Sources/utility_support.o: ../OTC_Sources/utility_support.c
+	@echo Building file: $<
+	@echo Invoking: ARM/GNU C Compiler : 6.3.1
+	$(QUOTE)C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\arm\arm-gnu-toolchain\bin\arm-none-eabi-gcc.exe$(QUOTE)  -x c -mthumb -D__SAMC21N18A__ -DDEBUG  -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\arm\CMSIS\5.4.0\CMSIS\Core\Include" -I"../OTC_Sources" -I"../Config" -I".." -I"../examples" -I"../hal/include" -I"../hal/utils/include" -I"../hpl/can" -I"../hpl/core" -I"../hpl/divas" -I"../hpl/dmac" -I"../hpl/gclk" -I"../hpl/mclk" -I"../hpl/nvmctrl" -I"../hpl/osc32kctrl" -I"../hpl/oscctrl" -I"../hpl/pm" -I"../hpl/port" -I"../hpl/sercom" -I"../hpl/tc" -I"../hri" -I"../stdio_redirect" -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\SAMC21_DFP\1.2.176\samc21n\include"  -Og -ffunction-sections -mlong-calls -g3 -Wall -mcpu=cortex-m0plus -c -std=gnu99 -MD -MP -MF "$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -MT"$(@:%.o=%.o)"   -o "$@" "$<" 
+	@echo Finished building: $<
+	
+
+OTC_Sources/zen_can_api.o: ../OTC_Sources/zen_can_api.c
 	@echo Building file: $<
 	@echo Invoking: ARM/GNU C Compiler : 6.3.1
 	$(QUOTE)C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\arm\arm-gnu-toolchain\bin\arm-none-eabi-gcc.exe$(QUOTE)  -x c -mthumb -D__SAMC21N18A__ -DDEBUG  -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\arm\CMSIS\5.4.0\CMSIS\Core\Include" -I"../OTC_Sources" -I"../Config" -I".." -I"../examples" -I"../hal/include" -I"../hal/utils/include" -I"../hpl/can" -I"../hpl/core" -I"../hpl/divas" -I"../hpl/dmac" -I"../hpl/gclk" -I"../hpl/mclk" -I"../hpl/nvmctrl" -I"../hpl/osc32kctrl" -I"../hpl/oscctrl" -I"../hpl/pm" -I"../hpl/port" -I"../hpl/sercom" -I"../hpl/tc" -I"../hri" -I"../stdio_redirect" -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\SAMC21_DFP\1.2.176\samc21n\include"  -Og -ffunction-sections -mlong-calls -g3 -Wall -mcpu=cortex-m0plus -c -std=gnu99 -MD -MP -MF "$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -MT"$(@:%.o=%.o)"   -o "$@" "$<" 

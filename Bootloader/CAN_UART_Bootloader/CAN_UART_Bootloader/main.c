@@ -4,38 +4,24 @@
 #include <debug_macros.h>
 #include <data_type_support.h>
 #include <message_id.h>
-#include <zen_can_api.h>
-#include <zen_message_id.h>
-
 
 /*##################################################*/
-#define MAX_FLASH_PAGE_SIZE_IN_BYTE     128
-#define APP_START_BASE_ADDRESS          (0xE000)	//start app from 0xE000
-#define BOOT_LOADER_TIMEOUT		2000		// mS
-#define BOOT_MODE			USB_MODE	// Select the boot mode | Boot over USB or CAN
+#define STATUS_LED	GPIO(GPIO_PORTB , 4)
 /*##################################################*/
-
-
-
-
-
-
-
 
 
 
 //*********************************************************************
 can_context_type		can;
 flash_wr_info_type		flash_write_info;
-
 static struct timer_task	time_counts_events;
 
 
-uint32_t page_size = 255;
-int timer_event_occured = 0;
-int can_rx_event_occured = 0;
-uint32_t temp_32bit_data =0;
-
+uint32_t			page_size = 255;
+int				timer_event_occured = 0;
+int				can_rx_event_occured = 0;
+uint32_t			temp_32bit_data =0;
+uint8_t				led_state; // for led blinking		
 union bit_to_arr{
 	uint8_t byte_arr[4];
 	uint32_t bit32_data;	
@@ -61,7 +47,7 @@ void isr_timer_0_call()
 
 void isr_can_0_rx_call()
 {
-	can_rx_event_occured = 0;
+	can_rx_event_occured++;
 }
 
 
@@ -78,13 +64,10 @@ int main(void)
 	time_counts_events.time_label = 0;
 	timer_add_task(&TIMER_0, &time_counts_events);
 	
-	//CAN 1 -> CAN communication
-	can_begin(&CAN_1 , CAN1 , 500 , 73);	// Initialize the CAN0 instance at 500 kbps
-	can_set_rxcb(&CAN_1 , (FUNC_PTR)isr_can_0_rx_call);	// Set the can rx callback function
-	can_set_filter(&CAN_1 , 0 , 0 , STD_ID);	// Set the filter for receiving all the message
-	can_busoff_set_cb(&CAN_1); // Bus off condition
+	gpio_set_pin_direction(STATUS_LED , GPIO_DIRECTION_OUT);
 	
-	
+	gpio_set_pin_level(STATUS_LED , true); // by default on
+	led_state = 1;
 	/* Reset the variables */
 	flash_write_info.curr_flash_write_addr	= APP_START_BASE_ADDRESS;
 	flash_write_info.flash_wr_buffer_index	= 0; // reset after every page write
@@ -95,25 +78,39 @@ int main(void)
 	app.state = INIT;
 	/* Start the timer for boot-loader timeout */
 	time_counts_events.interval = BOOT_LOADER_TIMEOUT;
-	//timer_start(&TIMER_0); 
+	timer_start(&TIMER_0); 
 	while (1) {
 		switch(app.state){
 			case INIT:
-				can_init(&can);
+				
+				can_init(&CAN_1 , CAN1 , (FUNC_PTR)isr_can_0_rx_call, 500);
+				
+				#if (BOOT_MODE == CAN_MODE)
+					printf("[ OK ] Bootloader init!\n");
+				#endif
 				/* Next state */
 				app.state = SERIAL_CAN_READ;
 			break;
 			
 			case SERIAL_CAN_READ:
+			
+				#if (BOOT_MODE == CAN_MODE)
+				if(can_rx_event_occured>0){
+					can_read(&can);
+					app.state = DECODE_CAN_DATA;	
+					can_rx_event_occured--;
+				}
+				
+				#else 
+				
 				if(can_read(&can)){
 					/* If new data is available then decode*/
 					app.state = DECODE_CAN_DATA;
 				} else {
 					/* else continue polling */
 					app.state = SERIAL_CAN_READ;
-					
 				}
-				
+				#endif
 			break;
 			
 			case DECODE_CAN_DATA:
@@ -161,6 +158,7 @@ void decode_can_data()
          * and base address[ 2 byte]
         */
         case CAN_START_FLASH_WRITE:
+		timer_stop(&TIMER_0); // stop jump to application and start boot process
 		can.can_id = CAN_START_FLASH_WRITE;
 		can.can_data[0] = (uint8_t)get_flash_page_size();
 		page_size = can.can_data[0]; // update the page size
@@ -171,6 +169,17 @@ void decode_can_data()
 		can.len = 3;
 		can_write(&can);
 		
+		
+		/* Reset all the variables and buffers for start from beginning */
+		flash_write_info.curr_flash_write_addr	= APP_START_BASE_ADDRESS;
+		flash_write_info.flash_wr_buffer_index	= 0; // reset after every page write
+		flash_write_info.page_byte_seq		= 0;
+		memset(flash_write_info.flash_wr_buffer, 0 , 128);
+		
+		#if (BOOT_MODE == CAN_MODE)
+		printf("[ OK ] Firmware uploading...... !\n");
+		#endif
+
 		/* NExt state */
 		app.state = SERIAL_CAN_READ;
         break;
@@ -184,6 +193,12 @@ void decode_can_data()
         */
 	case CAN_SEND_FLASH_DATA:
 		if(flash_write_info.page_byte_seq == can.can_data[0]){ // if the expected seq matched
+			/* On every data packet make led blink*/
+			gpio_set_pin_level(STATUS_LED , led_state);
+			if(led_state)
+				led_state =0;
+			else
+				led_state = 1;
 			/* Assign the data bytes from the can to page write buffer */
 			// can->data[1] is the number of bytes in a packet
 			// j is for index the data bytes 
@@ -207,7 +222,7 @@ void decode_can_data()
 			can.len = 1;
 			can_write(&can);
 			/* Error so*/
-			app.state = ERROR;
+			app.state = SERIAL_CAN_READ;
 		}
 	break;
         
@@ -218,6 +233,7 @@ void decode_can_data()
         */           
         case CAN_SEND_PAGE_COMPLETE:
 		if(can.can_data[0]){ // write page and give ack
+			
 			/* Write to page */
 			uint32_t temp_address = flash_write_info.curr_flash_write_addr;
 			int byte_size = flash_write_info.flash_wr_buffer_index;
@@ -257,7 +273,7 @@ void decode_can_data()
 			can.len = 1;
 			can_write(&can);
 			/* Error so*/
-			app.state = ERROR;
+			app.state = SERIAL_CAN_READ;
 		}
         break;
 	
@@ -308,7 +324,7 @@ void decode_can_data()
 			can.len = 1;
 			can_write(&can);
 			/* Error so*/
-			app.state = ERROR;
+			app.state = SERIAL_CAN_READ;
 		}
 		
 	break;    
@@ -320,13 +336,19 @@ void decode_can_data()
 }
 void jump_to_application()
 {	
+	
+	#if (BOOT_MODE == CAN_MODE)
+	printf("[ OK ] Application starting .... !\n");
+	#endif
+	
 	/* Deinit all the peripherals */
 	flash_deinit(&FLASH_0);
 	can_async_deinit(&CAN_1);
 	timer_deinit(&TIMER_0);
 	usart_sync_deinit(&TARGET_IO);
 	
-	
+	// On application start it will become low
+	gpio_set_pin_level(STATUS_LED , false);
 	
 	/* Jump to the application reset handler */
 	void (* app_call)(void) = (void*)(*(volatile uint32_t *)(APP_START_BASE_ADDRESS+4));
