@@ -13,6 +13,8 @@
 
 #define MAX_BYTE_IN_CAN_PACKET          6   // Maximum data byte sent in a CAN packet
 
+
+#define MAX_FAILED_UPLOAD_RETRY         3
 /*
 * HEX file related definition
 */

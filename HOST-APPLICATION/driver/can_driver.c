@@ -9,8 +9,8 @@ uint8_t serial_can_tx_len = 0;
 uint8_t serial_can_data[8] = {0};
 uint8_t can_tx_data[8] = {0}; // store temp hex data from can
 
-
-
+volatile char   serial_read_buff[MAX_INCOMMING_STRING_LENGTH];
+int actual_data_index = 0;
 
 uint8_t temp_buff[3] = {0, 0 ,0};
 uint8_t temp_copy_buffer[3] = {0};
@@ -28,7 +28,7 @@ void can_init(const can_context_type * can)
         #if SERIAL_IGNORE
                 printf("Serial Port init ignore\n\r");
         #else
-                printf("Configuring CAN Serial PORT-> %s\n", can->can_serial_port);
+                printf("[ OK ] Serial port configuration -> %s\n", can->can_serial_port);
                 config_serial_port(can->can_serial_port); // If the seril init not enabled in debug
         #endif
 }
@@ -176,63 +176,107 @@ void can_read(can_context_type * can)
         memset(serial_recv_can_id_temp ,0 ,3);
         memset(serial_recv_can_len ,0 ,1);
         memset(can_tx_data ,0 ,8);
-
+        memset(serial_read_buff , 0 , MAX_INCOMMING_STRING_LENGTH);
         #if INCOMMING_CAN_DRIVER_PRINT
                 printf("---------------------------------------\n");
                 printf("[CAN DRV] Serial req!\n");
         #endif
 
-        read_serial_string(buffer);
-
+        int byte_read = read_serial_string(serial_read_buff);
         #if INCOMMING_CAN_DRIVER_PRINT
-                printf("[CAN DRV] Read :%s:\n", buffer);
+                printf("[CAN DRV] GET str :%s: len->[%d]\n",serial_read_buff, byte_read);
         #endif
+        /* Fragment the string and extract data */
+        for(int i =0 ; i < byte_read ; i++  ){
+                
+                // Starting character 
+                if(serial_read_buff[i] == 't'){
+                        actual_data_index = 0; // reset the index as zero
+                                               // So that rest part will start from zero
 
-        int i =0;
-        for(i = 0 ; i<3 ; i++){
-	        serial_recv_can_id_temp[i] = buffer[i];
-	}
-        serial_can_tx_id = hexadecimalToDecimal(serial_recv_can_id_temp);
 
-        #if INCOMMING_CAN_DRIVER_PRINT
-        printf("[CAN DRV] Segmented ID: %s\n",serial_recv_can_id_temp);
-        #endif
+                // Termination character 
+                } else if(serial_read_buff[i] == '\n'){
+                        /* 
+                                one packet is defragmented and validate expectation
+                        */
+
+                        /* if the packet [It can be attaced like t001101\nt100101\n]*/
+                        
+
+                        #if INCOMMING_CAN_DRIVER_PRINT
+                        printf("[CAN DRV] Current Packet :%s:\n", buffer);
+                        #endif
+
+                        int i =0;
+                        for(i = 0 ; i<3 ; i++){
+	                        serial_recv_can_id_temp[i] = buffer[i];
+	                }
+                        serial_can_tx_id = hexadecimalToDecimal(serial_recv_can_id_temp);
+
+                        #if INCOMMING_CAN_DRIVER_PRINT
+                        printf("[CAN DRV] Current ID [0x%d]\n", serial_can_tx_id);
+                        #endif       
+
+                        if( ((serial_can_tx_id >= CAN_SENT_FLASH_WRITE_ERROR) && (serial_can_tx_id <= CAN_START_FLASH_WRITE)) || \
+                                (serial_can_tx_id == EJC_MCU_RST_FB_1) || \
+                                (serial_can_tx_id == EJC_MCU_RST_FB_2) || \
+                                (serial_can_tx_id == EJC_MCU_RST_FB_3) || \
+                                (serial_can_tx_id == EJC_MCU_RST_FB_4) || \
+                                (serial_can_tx_id == ENC_MCU_RST_FB) || \
+                                (serial_can_tx_id == VS_MCU_RST_FB) || \
+                                (serial_can_tx_id == FP_MCU_RST_FB) || \
+                                (serial_can_tx_id == AC_MCU_RST_FB) || \
+                                (serial_can_tx_id == WG_MCU_RST_FB)    )
+                        { // If current packet is accepted based on ID then fragment else do for next attached packet
+                                //----------------------------------------------------------------------------
+                                #if INCOMMING_CAN_DRIVER_PRINT
+                                printf("[CAN DRV] Segmented ID: %s\n",serial_recv_can_id_temp);
+                                #endif
              
-        can->can_id = serial_can_tx_id;
+                                can->can_id = serial_can_tx_id;
 			
-	// Copy the len from the data bytes and convert it to actual values
-	serial_recv_can_len[0] = buffer[3];
-	serial_can_tx_len = hexadecimalToDecimal(serial_recv_can_len);
+	                        // Copy the len from the data bytes and convert it to actual values
+	                        serial_recv_can_len[0] = buffer[3];
+	                        serial_can_tx_len = hexadecimalToDecimal(serial_recv_can_len);
 
-        #if INCOMMING_CAN_DRIVER_PRINT
-        printf("[CAN DRV] Segmented LEN: %d\n",serial_can_tx_len);
-        #endif
+                                #if INCOMMING_CAN_DRIVER_PRINT
+                                printf("[CAN DRV] Segmented LEN: %d\n",serial_can_tx_len);
+                                #endif
 
-        can->len = serial_can_tx_len;
+                                can->len = serial_can_tx_len;
 
-        //printf("can len str %s\n\r",serial_recv_can_id_temp);
-        //printf("Serial %d\n\r",serial_buff_size);
-	int index = 0;
-	for(i = 4 ; (i < (4 + (serial_can_tx_len*2)) ) ; i+=2){ // One byte means 2 character in serial
-	        can_tx_data[0] = buffer[i];
-		can_tx_data[1] = buffer[i+1];
-		serial_can_data[index++] = hexadecimalToDecimal(can_tx_data);
-	}
-        #if INCOMMING_CAN_DRIVER_PRINT
-                printf("[CAN DRV] Segmented data: ");
-        #endif
+                                //printf("can len str %s\n\r",serial_recv_can_id_temp);
+                                //printf("Serial %d\n\r",serial_buff_size);
+	                        int index = 0;
+	                        for(i = 4 ; (i < (4 + (serial_can_tx_len*2)) ) ; i+=2){ // One byte means 2 character in serial
+	                                can_tx_data[0] = buffer[i];
+		                        can_tx_data[1] = buffer[i+1];
+		                        serial_can_data[index++] = hexadecimalToDecimal(can_tx_data);
+	                        }
+                                #if INCOMMING_CAN_DRIVER_PRINT
+                                printf("[CAN DRV] Segmented data: ");
+                                #endif
 
-        for(int i= 0 ; i<8 ; i++ ){
+                                for(int i= 0 ; i<8 ; i++ ){
 
-                #if INCOMMING_CAN_DRIVER_PRINT
-                        printf("-%d[0x%x]-",serial_can_data[i], serial_can_data[i]);
-                #endif
+                                        #if INCOMMING_CAN_DRIVER_PRINT
+                                        printf("-%d[0x%x]-",serial_can_data[i], serial_can_data[i]);
+                                         #endif
 
-                can->can_data[i] = serial_can_data[i];
-        }
+                                        can->can_data[i] = serial_can_data[i];
+                                }
 
-        #if INCOMMING_CAN_DRIVER_PRINT
-        printf("\n---------------------------------------\n");
-        #endif
-        
+                                #if INCOMMING_CAN_DRIVER_PRINT
+                                printf("\n---------------------------------------\n");
+                                #endif
+
+                                //----------------------------------------------------------------------------
+                                break;
+                        }
+                // Other character 
+                } else {
+                    buffer[actual_data_index++] = serial_read_buff[i];
+                }
+        }       
 }

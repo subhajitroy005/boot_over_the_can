@@ -39,7 +39,8 @@ void config_serial_port(char* port_name)
 	serial_io_dcbSerialParams.dcb.fOutxDsrFlow        = FALSE;
 	serial_io_dcbSerialParams.dcb.fDsrSensitivity     = FALSE;
 	serial_io_dcbSerialParams.dcb.fAbortOnError       = TRUE;
-
+        //serial_io_dcbSerialParams.dcb.EvtChar             = '\n';
+        //serial_io_dcbSerialParams.dcb.EofChar            = '\n';
 	if (!SetCommState(serial_io_reference, &serial_io_dcbSerialParams.dcb)){
 		printf("[SERIAL DRV INIT][ ERR ] setting serial port config!\n");
 	}
@@ -50,7 +51,7 @@ void config_serial_port(char* port_name)
 
 	serial_io_time_out.ReadIntervalTimeout          = 20;
 	serial_io_time_out.ReadTotalTimeoutConstant     = 50;
-	serial_io_time_out.ReadTotalTimeoutMultiplier   = 10;
+	serial_io_time_out.ReadTotalTimeoutMultiplier   = 1;
 	serial_io_time_out.WriteTotalTimeoutConstant    = 50;
 	serial_io_time_out.WriteTotalTimeoutMultiplier  = 10;
 
@@ -60,12 +61,17 @@ void config_serial_port(char* port_name)
 	}
 
         /* Set the event mask */
-        event_mask = 1;
+        event_mask = (EV_DSR| EV_BREAK | EV_RXCHAR);
         if(!SetCommMask(serial_io_reference, event_mask)){
                 printf("[SERIAL DRV INIT][ ERR ] Setting serial event mask!\n");
         }
         //GetCommMask(serial_io_reference, &event_mask); // not require to check here
 
+        /* Flush the existing data in buffer 
+        int purge_mask = PURGE_RXCLEAR | PURGE_TXCLEAR;
+        if(PurgeComm(serial_io_reference,purge_mask));
+                printf("Serial Bufffered cleared\n");
+        */
         printf("[SERIAL DRV INIT][ OK ] Serial connection\n");
 }
 
@@ -90,10 +96,11 @@ void write_serial_string(char* string_data)
 
 	if(!WriteFile(serial_io_reference, serial_write_buff, byte_to_write, &dwBytesWritten, NULL)){ 
 		printf("[SERIAL DRV WR][ ERR ] Write -> Written %d out of %d\n",byte_written, byte_to_write);
+                exit(EXIT_FAILURE);
 	}
 }
 
-void read_serial_string(uint8_t * buffer)
+int read_serial_string(uint8_t * buffer)
 {       
         DWORD byte_read = 0;
         int actual_data_index = 0;
@@ -102,29 +109,33 @@ void read_serial_string(uint8_t * buffer)
         WaitCommEvent(serial_io_reference, &event_mask, NULL);
         
         /* Read the data here after event complete */
-        long unsigned int ret = ReadFile(serial_io_reference, serial_read_buff, MAX_INCOMMING_STRING_LENGTH, &byte_read, NULL);
-        
+        long unsigned int ret = ReadFile(serial_io_reference, buffer, 30, &byte_read, NULL);
 
+        return byte_read;
+
+        // Here we are not checking the string as there are attached string so check in the can driver
+        //long unsigned int ret = ReadFile(serial_io_reference, serial_read_buff, 30, &byte_read, NULL);
+        /*
+        //printf("HELLO:  :%d:\n", byte_read);
         #if INCOMMING_SERIAL_DRIVER_PRINT
         printf("[SERIAL DRV RD] Read str  :%s: len->%d\n",serial_read_buff, strlen(serial_read_buff));
         #endif
-
-	/* Extract the actual data from start and terminatoin character */	
+	// Extract the actual data from start and terminatoin character 	
         for(int i =0 ; i < byte_read ; i++  ){
                 
-                /* Starting character */
+                // Starting character 
                 if(serial_read_buff[i] == 't'){
                         actual_data_index = 0; // reset the index as zero
                                                // So that rest part will start from zero
 
 
-                /* Termination character */
+                // Termination character 
                 } else if(serial_read_buff[i] == '\n'){
                         // Break the loop so that we don't need the other rest part after termination
-                        break;
+                        //break; not break for attached and long string
 
 
-                /* Other character */
+                // Other character 
                 } else {
                     buffer[actual_data_index++] = serial_read_buff[i];
                 }
@@ -133,5 +144,5 @@ void read_serial_string(uint8_t * buffer)
         #if INCOMMING_SERIAL_DRIVER_PRINT
         printf("[SERIAL DRV RD] Extracted read  :%s: len->:%d:\n", buffer , strlen(buffer));
         #endif
-        
+        */
 }

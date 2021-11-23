@@ -4,6 +4,8 @@
 #include <data_type_support.h>
 #include <config.h>
 #include <utility_support.h>
+#include <can_message_id.h>
+#include <zen_message_id.h>
 
 #if LINUX // From the compiler line {for linux inclusion}
         #include <serial_drv_linux.h>

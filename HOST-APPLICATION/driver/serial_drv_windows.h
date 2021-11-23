@@ -30,7 +30,7 @@ void write_serial_string(char* string_data);
  *
  * \param[uint8_t * buffer]: Pointer to the buffer to be filled [string],
  */
-void read_serial_string(uint8_t * buffer);
+int read_serial_string(uint8_t * buffer);
 
 
 

@@ -27,21 +27,15 @@ union bit_to_arr{
 
 
 //--------------- Individual data filed buffer _
-//char *portname = "/dev/ttyACM0"; // For linux 
-char *portname = "COM6"; // For windows
-char* global_hex_file_name = "abc.hex";
-int can_node;
-int reset_node_id;
-int reset_req;
-
-
-
-
-
-
-
-
-
+char * temp_arg_arr;
+//char *portname = "/dev/ttyACM0";      // For linux 
+char *portname;                // Default for windows
+char *global_hex_file_name;
+int reset_req_flag = 1;
+int reset_message_id = 0;               // Message ID for sw reset the board which we need to upload the code.
+int reset_ack_id = 0;
+int number_of_fail_retry = 0;           // fail retry number
+int max_number_retry = MAX_FAILED_UPLOAD_RETRY;               // Default retry value 3
 
 // MCU parametres
 int mcu_pagesize = 0;
@@ -59,71 +53,93 @@ void decode_incomming_can_data(can_context_type * can ,type_machine_state * app)
 
 /* MAIN ____________________________________________________________________________*/
 int main(int argc, char *argv[])
-{       
+{
+        /* Handling the command line arguments */
+        for(int i = 1 ; i <= (argc - 1) ; i+=2 ){
+                
+                temp_arg_arr = argv[i];
+               
+                switch(temp_arg_arr[1]){
+                        case 'p': // set the com port
+                               portname = argv[i+1];
+                        break;
+
+                        case 'w': // Hex file name
+                                global_hex_file_name = argv[i+1];
+                        break;
+
+                        case 'r': // Node CAN reset req en
+                                reset_req_flag = atoi(argv[i+1]);
+                        break;
+
+                        case 'm': // Reet message ID
+                             reset_message_id =  atoi(argv[i+1]);  
+                        break;
+
+                        case 'a': // Ack messgae ID
+                                reset_ack_id = atoi(argv[i+1]);
+                        break;
+
+                        case 't': // Number of failed retry
+                                max_number_retry = atoi(argv[i+1]);
+                        break;
+
+                        case 'h': // Help
+                                printf("\nOver the can firmware Upload\n");
+                                printf("otc [<command> <value>]\n");
+                                printf("\t-p\tCAN interface serial port.\n");
+                                printf("\t-w\tCAN Hex file name [ This should be in the same directory of otc].\n");
+                                printf("\t-r\tReset the mode via CAN message [0]-> disable [1]-> enable.\n");
+                                printf("\t-m\tIf the reset req is enabled then the reset req message id in decimal value.\n");
+                                printf("\t-a\tIf the reset req is enabled then the reset req ack message id in decimal value.\n");
+                                printf("\t-t\tIf firmware upload failed at any point then how many times retry.\n");
+                                goto out_from_loop;
+                        break;
+                        break;
+
+                        default:
+                                printf("\t-%c command not found!\n\t-h for help!\n",temp_arg_arr[1]);
+                                goto out_from_loop;
+                        break;
+
+               }
+               
+        }
         
 
+        /* Check for some mandatory values */
+        if(portname == NULL){
+                printf("[ ERR ] Serial COM port [CAN converter interface ] not selected !\n");
+                goto out_from_loop;
+        } else {
+                printf("CAN interface COM [%s]\n",portname);
+        }
+
+        if(global_hex_file_name == NULL){
+                printf("[ ERR ] HEX file not selected !\n");
+                goto out_from_loop;
+        } else {
+                printf("HEX file [%s]\n",global_hex_file_name);
+        }
+
+        if(reset_req_flag){ // if reset req is enabled
+                if(reset_message_id == 0){
+                        printf("[ ERR ] Reset req message id not defined !\n");
+                        goto out_from_loop;
+                } else {
+                        printf("Reset req CAN ID [0x%x] !\n",reset_message_id);
+                }
+
+                if(reset_ack_id == 0 ){
+                        printf("[ ERR ] Reset ack message id not defined !\n");
+                        goto out_from_loop;
+                } else {
+                        printf("Reset ack CAN ID [0x%x] !\n",reset_ack_id);
+                }
+        }
+
         
-        portname = argv[1];
-        global_hex_file_name = argv[2];
-        can_rw.can_serial_port = portname;
-        flash_wr_info.curr_hex_line_adress = 0;
-        flash_wr_info.curr_mcu_mem_addr = 0;
-        can_node = atoi(argv[3]);
-        reset_req = atoi(argv[4]);
-        printf("NODE Selected: %d\n",can_node);
-        /* Reset node ID*/
-        switch(can_node){
-                case 1:
-                        reset_node_id = 0;
-                break;
-                case 2:
-                        reset_node_id = 0x8B;
-                break;
-                case 3:
-                        reset_node_id = 0xC6;
-                break;
-                case 4:
-                        reset_node_id = 0x107;
-                break;
-                case 5:
-                        reset_node_id = 0x14D;
-                break;
-                case 6:
-                        reset_node_id = 0x18D;
-                break;
-                case 7:
-                        reset_node_id = 0x1CD;
-                break;
-                case 8:
-                        reset_node_id = 0x20D;
-                break;
-                case 9:
-                        reset_node_id = 0x24D;
-                break;
-                case 10:
-                        reset_node_id = 0x28D;
-                break;
-                case 11:
-                        reset_node_id = 0x2CD;
-                break;
-                case 12:
-                        reset_node_id = 0x30D;
-                break;
-                case 13:
-                        reset_node_id = 0x34D;
-                break;
-                case 14:
-                        reset_node_id = 0x789;
-                break;
-                case 15:
-                        reset_node_id = 0x7C9;
-                break;
-
-                default:
-                break;
-        } 
-
-
+        goto out_from_loop;
         /*
         * Start the execution from INIT
         */
@@ -143,10 +159,8 @@ int main(int argc, char *argv[])
                                 * Print the heading of the application
                                 * eg: name and version no
                                 */
-                                printf("-------------------\n");
-                                printf("Over Ther CAN V 1.0\n");
+                                printf("Over Ther CAN [ Version 1.10 ]\n");
                                 printf("Support @ subhajtroy005@gmail.com\n");
-                                printf("-------------------\n\r");
                                 /*
                                 * Init the can communication through the serial
                                 */
@@ -158,6 +172,8 @@ int main(int argc, char *argv[])
                                 
 
                                 /* variable default */
+                                flash_wr_info.curr_hex_line_adress = 0;
+                                flash_wr_info.curr_mcu_mem_addr = 0;
                                 each_hex_line_buff.line_count = 0;
                                 flash_wr_info.sent_page_byte_counter=0;
                                 flash_wr_info.page_byte_seq = 0;
@@ -187,12 +203,45 @@ int main(int argc, char *argv[])
                                 read_file_to_queue(global_hex_file_name , &hex_line_q); // Read all the file 
 
                                 // Next state
-                                if(reset_req)
-                                        app.state = SEND_RESET;
-                                else 
+                                /* 
+                                * if there are error that mean this is first time then send reset
+                                * Else start the flash writing from beginig 
+                                */ 
+                                if(number_of_fail_retry == 0)
+                                        if(reset_req_flag) // if the reset rew is enabled
+                                                app.state = SEND_RESET;
+                                        else
+                                                app.state = START_BOOT_FLASH_WRITE;  
+                                else{
+                                        /* retries */
+                                        printf("[ OK ] Startig flash writing sequence ! Retry [%d]",number_of_fail_retry);
                                         app.state = START_BOOT_FLASH_WRITE;
+                                }
+                                        
                         break;
 
+
+                        /*
+                        *********************************************************
+                        *                       STATE: SEND_RESET
+                        * 
+                        * ASK_PAGE_SIZE state : Send reset request to the node,
+                        *                       so that it can go to the boot
+                        *                       loader mode.
+                        *********************************************************
+                        */
+                        case SEND_RESET:
+                                /* Send sw reset */
+                                printf("[ CAN ---> ] Node reset message sent!\n");
+                                can_rw.can_id = reset_message_id;
+                                can_rw.can_data[0] = CAN_TXN_QUERY; // send a query
+                                can_rw.len = 1;
+                                can_write(&can_rw);
+                                /* Sleep 1 sec fo go to booloader mode */
+                                
+                                app.state = READ_SERIAL_CAN_DATA;
+                                
+                        break;
 
                         /*
                         *********************************************************
@@ -203,19 +252,6 @@ int main(int argc, char *argv[])
                         *                       of MCU.
                         *********************************************************
                         */
-                        case SEND_RESET:
-                                /* Send sw reset */
-                                printf("Node id [ %d ] Reset Requested !\n",can_node);
-                                can_rw.can_id = reset_node_id;
-                                can_rw.can_data[0] = CAN_TXN_QUERY; // send a query
-                                can_rw.len = 1;
-                                can_write(&can_rw);
-                                /* Sleep 1 sec fo go to booloader mode */
-                                
-                                app.state = READ_SERIAL_CAN_DATA;
-                                
-                        break;
-
                         case START_BOOT_FLASH_WRITE:
                                 sleep(1);
                                 /* Start uploading bootloader */
@@ -223,7 +259,7 @@ int main(int argc, char *argv[])
                                 can_rw.can_data[0] = CAN_TXN_QUERY; // send a query
                                 can_rw.len = 1;
                                 can_write(&can_rw);
-                                printf("[-->] Boot flash write requested !\n");
+                                printf("[ CAN ---> ] Boot flash write requested !\n");
 
                                 // Next state
                                 app.state = READ_SERIAL_CAN_DATA;
@@ -294,9 +330,9 @@ int main(int argc, char *argv[])
                                         // Next state : File read complete so next state is write to flash
                                         app.state =  FLASH_WRITE;
                                 } else { // All hex file line adressed file operation done
-                                        printf("Nothig in the hex file queue!\n\r");
+                                        printf("[ CRITICAL ERR ] Nothig in the hex file queue!\n\r");
                                         // Next state
-                                        app.state = ERROR;
+                                        goto out_from_loop;
                                 }   
                         break;
 
@@ -317,7 +353,7 @@ int main(int argc, char *argv[])
                                                         /* Caution : Not handling the max page bytes as the hex file did that */
                                                         can_rw.can_id = CAN_SEND_FLASH_DATA;
                                                         /* byte 0 is the packet seq */
-                                                        can_rw.can_data[0] = flash_wr_info.page_byte_seq++;
+                                                        can_rw.can_data[0] = flash_wr_info.page_byte_seq;
 
                                                         /* Assigning bytes form the packet fomr byte 2 */
                                                         int i, j; // i index the can data byte j track the number of bytes in a packet
@@ -336,7 +372,7 @@ int main(int argc, char *argv[])
                                                         /* Next state is to see the ack of this bye so can read  */
                                                         app.state = READ_SERIAL_CAN_DATA;
                                                 } else { // One line data send so request to write in MCU pages
-                                                        printf("[Line %d]",each_hex_line_buff.line_count);
+                                                        printf("[EOL %d]",each_hex_line_buff.line_count);
 
                                                         /* One line complete so write the data in MCU page req */
                                                         can_rw.can_id = CAN_SEND_PAGE_COMPLETE;
@@ -363,7 +399,7 @@ int main(int argc, char *argv[])
                                                 can_rw.can_id = CAN_SEND_EXT_SEG_ADDR;
 		                                can_rw.can_data[0] =  each_hex_line_buff.data[0];
 		                                can_rw.can_data[1] =  each_hex_line_buff.data[1];
-                                                printf("[-->] EXT segment adress sent [0x %x-%x]\n",each_hex_line_buff.data[0],each_hex_line_buff.data[1]);
+                                                printf("[ CAN ---> ] EXT segment adress sent [0x %x-%x]\n",each_hex_line_buff.data[0],each_hex_line_buff.data[1]);
                                                 can_rw.len =2;
                                                 can_write(&can_rw);
                                                 
@@ -388,8 +424,8 @@ int main(int argc, char *argv[])
                                         break;
                                         
                                         default: // Record type not found
-                                                printf("[ ERR ] HEX file Record type not found!\n");
-                                                app.state = ERROR;
+                                                printf("[ CRITICAL ERR ] HEX file Record type not found!\n");
+                                                goto out_from_loop;
                                         break;
 
 
@@ -407,8 +443,42 @@ int main(int argc, char *argv[])
                         *********************************************************
                         */
                         case ERROR:
-                                printf("\n\nState ERROR: Abort !\n\n");
-                                goto out_from_loop;
+                                /* Check for number of retries and if is less t
+                                 * than or equal to permitable range then start 
+                                 * from beginig else abort 
+                                 */
+                                if(number_of_fail_retry <= max_number_retry){
+                                        /* Flush the queue */
+                                        printf("[ ERR ] Firmware upload failed! Retrying........");
+
+                                        /* Flush the hex line queue so that the program start from beging */
+                                        while(queue_size(&hex_line_q) != 0){
+                                                pop(&hex_line_q);
+                                        }
+
+                                        /* reset the variables */
+                                        flash_wr_info.curr_hex_line_adress = 0;
+                                        flash_wr_info.curr_mcu_mem_addr = 0;
+                                        each_hex_line_buff.line_count = 0;
+                                        flash_wr_info.sent_page_byte_counter=0;
+                                        flash_wr_info.page_byte_seq = 0;
+                                        flash_wr_info.packet_byte_counter = 0;
+                                        each_hex_line_buff.total_line_count = 0;
+
+                                        number_of_fail_retry++; // increment the retry
+
+                                        /* Start from the hex line queue */
+                                        app.state = READ_FILE;
+
+                                } else {
+                                        printf("[ ERROR ] Maximum retry limit exceeded ! Upload failed\n");
+                                        printf("****************\n Application maynot work properly!\n");
+                                        printf(" 1. Reset the node as fixed bootloader mode !\n");
+                                        printf(" 2. run the programmer as -r0 [ no reset req ] !\n");
+                                        printf("****************\n");
+                                        goto out_from_loop;
+                                }
+                                
                         break;
 
                         /*
@@ -430,14 +500,13 @@ int main(int argc, char *argv[])
                         *********************************************************
                         */
                         default:
-                                printf("Error!! Default state executed!\n\r");
+                                printf("Error!! Default state executed!\n");
                                 goto out_from_loop;
                         break;
                 }
         }
 
         out_from_loop:
-        printf("\n\r****************    Program Exit!      ************\n\r");
         return 0;
 }
 
@@ -457,20 +526,20 @@ void decode_incomming_can_data(can_context_type * can  , type_machine_state * ap
                 */
                 case CAN_START_FLASH_WRITE:
                         flash_wr_info.mcu_page_size = can->can_data[0];
-                        printf("[<--] Page Size: %d\n",flash_wr_info.mcu_page_size);
+                        printf("[ CAN <--- ][ OK ] Page Size: %d | ",flash_wr_info.mcu_page_size);
                         flash_wr_info.bit32_data = can->can_data[2];
                         flash_wr_info.bit32_data = (flash_wr_info.bit32_data << 8);
                         flash_wr_info.bit32_data &= 0xFF00;
                         flash_wr_info.bit32_data |= can->can_data[1];
                         flash_wr_info.curr_mcu_mem_addr  =  flash_wr_info.bit32_data;
-                        printf("[<--] MCU Base adress: 0x%x\n",flash_wr_info.curr_mcu_mem_addr);
+                        printf("MCU Base adress: 0x%x\n",flash_wr_info.curr_mcu_mem_addr);
                         
                         /* Application ack get and based on data next state decide */
                         if(flash_wr_info.mcu_page_size !=0 ){
                                 // If success then read the hex file and further process
                                 app->state = DECODE_HEX_FILE;
                         } else {
-                                printf("[<--][ ERR ] MCU page size get 0\n"); 
+                                printf("[ CAN <--- ][ ERR ] MCU page size get 0\n"); 
                                  app->state = ERROR;
                         }
                                 
@@ -483,12 +552,13 @@ void decode_incomming_can_data(can_context_type * can  , type_machine_state * ap
                         /*      Check the sequence what we sent [ increment before so + 1 ] 
                                 is what received by the MCU 
                         */
-                        if(flash_wr_info.page_byte_seq == can->can_data[0] + 1){
+                        if(flash_wr_info.page_byte_seq == can->can_data[0]){
+                                flash_wr_info.page_byte_seq++; // increment the sequence for the next packet
                                 /* Write other bytes */
                                 app->state = FLASH_WRITE;
-                                printf(">"); 
+                                printf("*"); 
                         } else {
-                                printf("[<--] MCU data packet seq mismatch\n");
+                                printf("\n[ CAN <--- ][ ERR ] MCU data packet seq mismatch\n");
                                 app->state = ERROR;
                         }
                 break;
@@ -496,22 +566,21 @@ void decode_incomming_can_data(can_context_type * can  , type_machine_state * ap
                 case CAN_SEND_PAGE_COMPLETE:
                         /* Page write ack from MCU */
                         if(can->can_data[0]) { // page write successful so decode next line and send
-                                printf("*");
                                 /* MCU send infomations */
-                                printf("    [Bytes %d]",can->can_data[1]);// number of bytes written
+                                printf("\t| MCU written Bytes %d : ",can->can_data[1]);// number of bytes written
                                 bit_to_arr_conv.byte_arr[0] = can->can_data[2];
                                 bit_to_arr_conv.byte_arr[1] = can->can_data[3];
                                 bit_to_arr_conv.byte_arr[2] = can->can_data[4];
                                 bit_to_arr_conv.byte_arr[3] = can->can_data[5];
                                  flash_wr_info.curr_mcu_mem_addr =  bit_to_arr_conv.bit32_data;
-                                printf("    [Address: 0x%x]",flash_wr_info.curr_mcu_mem_addr);
+                                printf("Address: 0x%x   ",flash_wr_info.curr_mcu_mem_addr);
                                 /* Line percentage calculation */
                                 float complete_percent = (float)((each_hex_line_buff.line_count / (float)each_hex_line_buff.total_line_count) * 100.f); 
-                                printf("   [%.2f %c]\n", complete_percent, '%');
+                                printf("[%.2f %c]\n", complete_percent, '%');
                                 app->state = DECODE_HEX_FILE;
 
                         } else {
-                                printf("[<--] MCU page write failed !\n");
+                                printf("\n[ CAN <--- ][ ERR ] MCU page write failed !\n");
                                 app->state = ERROR; 
                         }
                 break;
@@ -526,7 +595,7 @@ void decode_incomming_can_data(can_context_type * can  , type_machine_state * ap
                         //temp_32bit_data = ( ((can->can_data[3]<<24) & 0xFF000000) | ((can->can_data[2]<<16) & 0xFF0000) | ((can->can_data[1]<<8) & 0xFF00) | (can->can_data[0] & 0xFF) );
                         flash_wr_info.curr_mcu_mem_addr =  bit_to_arr_conv.bit32_data;
 
-                        printf("[<--] MCU Extended segment adress ACK  [0x%x]\n", flash_wr_info.curr_mcu_mem_addr);
+                        printf("[ CAN <--- ][ OK ] MCU Extended segment adress ACK  [0x%x]\n", flash_wr_info.curr_mcu_mem_addr);
                         /* next state decode hex file */
                         app->state = DECODE_HEX_FILE;
                 break;
@@ -535,43 +604,26 @@ void decode_incomming_can_data(can_context_type * can  , type_machine_state * ap
 
                 case CAN_SEND_JUMP_TO_APP:
                         if(can->can_data[0]){
-                                printf("Upload Complete!\nJump to application....\n");
+                                printf("[ CAN <--- ][ OK ] Upload Completed....! Jump to application....\n");
                                 app->state = APP_EXIT;
                         } else {
-                                printf("APP jumpo Wrong Ack\n");
+                                printf("[ CAN <--- ][ ERR ] APP start neg ack\n");
                                 app->state = ERROR;
                         }
                 break;
 
                 case CAN_SENT_FLASH_WRITE_ERROR: // flash write error in mcu
-                        printf("[<--] ERROR: MCU flah write\n");
+                        printf("[ CAN <--- ][ ERR ] MCU ERROR ACK! \n");
                         app->state = ERROR;
                 break;
 
 
-
-
-                /* Read reset replys */
-                case EJC_MCU_RST_FB_1:
-                        app->state = START_BOOT_FLASH_WRITE;
-                break;
-
-                case EJC_MCU_RST_FB_2:
-                        app->state = START_BOOT_FLASH_WRITE;
-                break;
-
-                case EJC_MCU_RST_FB_3:
-                        app->state = START_BOOT_FLASH_WRITE;
-                break;
-
-                case EJC_MCU_RST_FB_4:
-                        app->state = START_BOOT_FLASH_WRITE;
-                break;
-
-
                 default:
-                        //printf("[<--]ERROR: CAN Message ID Not listed! [ 0x%x ]\n",can->can_id);
-                        app->state = READ_SERIAL_CAN_DATA;
+                        if(can->can_id == reset_ack_id){ // if it is a reset ack ID
+                                app->state = START_BOOT_FLASH_WRITE;          
+                        } else {
+                                app->state = READ_SERIAL_CAN_DATA;
+                        }
                 break;
         }
 }
@@ -610,7 +662,7 @@ void read_file_to_queue(char * file_name , queue * q)
 
         each_hex_line_buff.total_line_count= each_hex_line_buff.total_line_count - 1; // One minus for the last line as eol
         close_file(file_ptr);
-        printf("%s: Reading Completed! Total Line %d\n" , file_name , each_hex_line_buff.total_line_count);
+        printf("[ OK ] %s Reading Completed ! Total Line %d\n" , file_name , each_hex_line_buff.total_line_count);
 }
 
 /*

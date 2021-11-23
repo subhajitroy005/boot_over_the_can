@@ -5,9 +5,8 @@
 *.bat
 *.lss
 *.exe
+*.elf
+*.eep
 *.d
 *.srec
-*.elf
 *.bin
-*.eep
-*.log
