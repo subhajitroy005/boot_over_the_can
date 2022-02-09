@@ -4,13 +4,12 @@
 */
 #include <utility_support.h>
 #include <file_handling_support.h>
-#include <can_driver.h>  // For can related support
+#include <can_driver.h>                 // For can related support
 #include <can_message_id.h>
 #include <time_drv_linux.h>
 #include <config.h>
 #include <data_type_support.h>
 #include <queue.h>
-#include "zen_message_id.h"
 
 /* Variable Declaraation ___________________________________________________________*/
 int                     i;                      // Global index purpose                                          
@@ -26,19 +25,19 @@ union bit_to_arr{
 }bit_to_arr_conv;
 
 
-//--------------- Individual data filed buffer _
+//--------------- Individual data filed buffer  -------------------------
 char * temp_arg_arr;
-//char *portname = "/dev/ttyACM0";      // For linux 
-char *portname;                // Default for windows
+char *portname;              
 char *global_hex_file_name;
-int reset_req_flag = 1;
-int reset_message_id = 0;               // Message ID for sw reset the board which we need to upload the code.
-int reset_ack_id = 0;
-int number_of_fail_retry = 0;           // fail retry number
-int max_number_retry = MAX_FAILED_UPLOAD_RETRY;               // Default retry value 3
+
+int reset_req_flag              = 1;
+int reset_message_id            = 0;                                    // Message ID for sw reset the board which we need to upload the code.
+int reset_ack_id                = 0;
+int number_of_fail_retry        = 0;                                    // fail retry number
+int max_number_retry            = MAX_FAILED_UPLOAD_RETRY;              // Default retry value 3
 
 // MCU parametres
-int mcu_pagesize = 0;
+int mcu_pagesize                = 0;
 
 
 
@@ -53,7 +52,12 @@ void decode_incomming_can_data(can_context_type * can ,type_machine_state * app)
 
 /* MAIN ____________________________________________________________________________*/
 int main(int argc, char *argv[])
-{
+{       
+        if(argc ==1){ // No arguments passed
+                printf("\n\nOver Ther CAN [ Version 1.10 ]\n");
+                printf("\tPlease provide necessary parameters!\n\t-h for help!\n");
+                goto out_from_loop;
+        }
         /* Handling the command line arguments */
         for(int i = 1 ; i <= (argc - 1) ; i+=2 ){
                 
@@ -107,39 +111,6 @@ int main(int argc, char *argv[])
         }
         
 
-        /* Check for some mandatory values */
-        if(portname == NULL){
-                printf("[ ERR ] Serial COM port [CAN converter interface ] not selected !\n");
-                goto out_from_loop;
-        } else {
-                printf("CAN interface COM [%s]\n",portname);
-        }
-
-        if(global_hex_file_name == NULL){
-                printf("[ ERR ] HEX file not selected !\n");
-                goto out_from_loop;
-        } else {
-                printf("HEX file [%s]\n",global_hex_file_name);
-        }
-
-        if(reset_req_flag){ // if reset req is enabled
-                if(reset_message_id == 0){
-                        printf("[ ERR ] Reset req message id not defined !\n");
-                        goto out_from_loop;
-                } else {
-                        printf("Reset req CAN ID [0x%x] !\n",reset_message_id);
-                }
-
-                if(reset_ack_id == 0 ){
-                        printf("[ ERR ] Reset ack message id not defined !\n");
-                        goto out_from_loop;
-                } else {
-                        printf("Reset ack CAN ID [0x%x] !\n",reset_ack_id);
-                }
-        }
-
-        
-        goto out_from_loop;
         /*
         * Start the execution from INIT
         */
@@ -159,8 +130,44 @@ int main(int argc, char *argv[])
                                 * Print the heading of the application
                                 * eg: name and version no
                                 */
-                                printf("Over Ther CAN [ Version 1.10 ]\n");
-                                printf("Support @ subhajtroy005@gmail.com\n");
+                                printf("\n\nOver Ther CAN [ Version 1.10 ]\n");
+                                printf("Support @ subhajtroy005@gmail.com\n\n");
+
+                                /* 
+                                * Check for some mandatory values 
+                                */
+                                if(portname == NULL){
+                                        printf("\t[ ERR ] Serial COM port [CAN converter interface ] not selected !\n");
+                                        goto out_from_loop;
+                                } else {
+                                        printf("\tCAN interface COM [%s]\n",portname);
+                                        can_rw.can_serial_port = portname;
+                                }
+
+                                if(global_hex_file_name == NULL){
+                                        printf("\t[ ERR ] HEX file not selected !\n");
+                                        goto out_from_loop;
+                                } else {
+                                        printf("\tHEX file [%s]\n",global_hex_file_name);
+                                }
+
+                                if(reset_req_flag){ // if reset req is enabled
+                                        if(reset_message_id == 0){
+                                                printf("\t[ ERR ] Reset req message id not defined !\n");
+                                                goto out_from_loop;
+                                        } else {
+                                                printf("\tReset req CAN ID [0x%x] !\n",reset_message_id);
+                                        }
+
+                                        if(reset_ack_id == 0 ){
+                                                printf("\t[ ERR ] Reset ack message id not defined !\n");
+                                                goto out_from_loop;
+                                        } else {
+                                                printf("\tReset ack CAN ID [0x%x] !\n",reset_ack_id);
+                                        }
+                                } else {
+                                        printf("\tReset Req skipped!\n");
+                                }
                                 /*
                                 * Init the can communication through the serial
                                 */
@@ -507,6 +514,7 @@ int main(int argc, char *argv[])
         }
 
         out_from_loop:
+        can_de_init(&can_rw);
         return 0;
 }
 

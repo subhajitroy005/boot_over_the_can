@@ -27,6 +27,8 @@ union bit_to_arr{
 	uint32_t bit32_data;	
 }bit_to_arr_conv;
 
+uint8_t read_boot_data[2] = {0};
+
 //------------------------------------------------------------------------------------
 void write_array_data_to_flash(uint8_t * data , int page_size , uint32_t abs_adress);
 int get_flash_page_size();
@@ -40,12 +42,12 @@ void jump_to_application();
 /* Application call */
 
 /* ISR calls */
-void isr_timer_0_call()
+volatile void isr_timer_0_call()
 {
 	timer_event_occured = 1;	
 }
 
-void isr_can_0_rx_call()
+volatile void isr_can_0_rx_call()
 {
 	can_rx_event_occured++;
 }
@@ -76,9 +78,18 @@ int main(void)
 	
 	/* Start app state */
 	app.state = INIT;
-	/* Start the timer for boot-loader timeout */
-	time_counts_events.interval = BOOT_LOADER_TIMEOUT;
-	timer_start(&TIMER_0); 
+	/* check the previous uploading status and Start the timer for boot-loader timeout */
+
+	
+	flash_read(&FLASH_0, STATUS_CHECK_ADDRESS , read_boot_data, 1);
+	if(read_boot_data[0] == 1){ // if previous boot was successful then start timeout else stay in boot.
+		time_counts_events.interval = BOOT_LOADER_TIMEOUT;
+		timer_start(&TIMER_0);
+	}
+
+	
+
+	
 	while (1) {
 		switch(app.state){
 			case INIT:
@@ -176,6 +187,10 @@ void decode_can_data()
 		flash_write_info.page_byte_seq		= 0;
 		memset(flash_write_info.flash_wr_buffer, 0 , 128);
 		
+		/* Starting the flash to make the boot flag as 0 set after successful upload */
+		read_boot_data[0] = 0;
+		flash_write(&FLASH_0, STATUS_CHECK_ADDRESS, read_boot_data, 1);
+
 		#if (BOOT_MODE == CAN_MODE)
 		printf("[ OK ] Firmware uploading...... !\n");
 		#endif
@@ -347,6 +362,10 @@ void jump_to_application()
 	timer_deinit(&TIMER_0);
 	usart_sync_deinit(&TARGET_IO);
 	
+	/* Upload successfully so make the boot flag high */
+	read_boot_data[0] = 1;
+	flash_write(&FLASH_0, STATUS_CHECK_ADDRESS, read_boot_data, 1);
+
 	// On application start it will become low
 	gpio_set_pin_level(STATUS_LED , false);
 	

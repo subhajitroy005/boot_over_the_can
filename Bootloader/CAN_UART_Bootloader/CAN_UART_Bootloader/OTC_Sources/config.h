@@ -19,7 +19,8 @@
 
 /* Boot mode configuration */
 #define MAX_FLASH_PAGE_SIZE_IN_BYTE     128
-#define APP_START_BASE_ADDRESS          (0xE000)	//start app from 0xE000
+#define STATUS_CHECK_ADDRESS		(0x7FFF)	// Here we will store the app programming status 
+#define APP_START_BASE_ADDRESS          (0x8000)	//start app from 0x8000 // Use the maximun size of the bootloader allowed for safe site,
 #define BOOT_LOADER_TIMEOUT		2000		// mS
 #define BOOT_MODE			CAN_MODE	// Select the boot mode | Boot over USB or CAN
 

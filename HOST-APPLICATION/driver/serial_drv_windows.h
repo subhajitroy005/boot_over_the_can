@@ -32,6 +32,6 @@ void write_serial_string(char* string_data);
  */
 int read_serial_string(uint8_t * buffer);
 
-
+void clear_buffer();
 
 #endif
