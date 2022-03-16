@@ -1,13 +1,13 @@
 # ALL the variables for directory and CC
 #
 #
-
+EXTRA_MAKE_FLAGS= -s --jobs=4 --output-sync
 CC = gcc
 LINUX_DEBUG_FILE_DIR = debug_files/x86_linux_deb
 WINDOWS_DEBUG_FILE_DIR = debug_files\x86_windows_deb
 ###### Debug line flag ##############
-DEBUG_FLAGS = -g3
-
+DEBUG_FLAGS= -Wall
+EXTRA_CC_FLAGS= -Wall
 
 ##################### OS command   [Windows -> "Windows" || Linux -> "Linux"]################
 OS = Windows

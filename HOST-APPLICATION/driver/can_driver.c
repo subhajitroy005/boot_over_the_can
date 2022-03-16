@@ -33,11 +33,9 @@ void can_init(const can_context_type * can)
         #endif
 
         write_serial_string("S6\r");
-        int byte_read = read_serial_string(buffer);
-        //write_serial_string("M000\r");
-        //write_serial_string("m000\r");
+        read_serial_string(buffer);
         write_serial_string("O\r");
-        byte_read = read_serial_string(buffer);
+        read_serial_string(buffer);
 
         printf("Done write the seral configurarion\n");
 }
@@ -167,12 +165,10 @@ void can_write(can_context_type * can)
         printf("\n---------------------------------------\n");
         #endif
 
-	//io_write(lv_io , temp_buff_data, 2);
 	/* a \r should be padded after the bytes 5+ (i*2) */
 	uart_tx_frame_buff[5+(i*2)] = '\r';											
-	int serial_data_len = (6+(i*2));
-	/* Send string to to Serial */
-        //uint8_t * uint8_data = (uint8_t *)uart_tx_frame_buff;
+	// Length of total bytes Not using right now
+        //int serial_data_len = (6+(i*2));
 
         #if OUTGOING_CAN_DRIVER_PRINT
                 printf("[CAN DRV] Write :%s:\n",uart_tx_frame_buff);
@@ -183,7 +179,6 @@ void can_write(can_context_type * can)
 
 void can_read(can_context_type * can)
 {
-        int len = 0;
         memset(buffer , 0 , sizeof(buffer));
         memset(serial_can_data ,0 ,8);
         memset(serial_recv_can_id_temp ,0 ,3);

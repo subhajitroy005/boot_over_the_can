@@ -28,25 +28,25 @@ otc.$(EXE_TYPE_SUFFIX): $(OBJ_FILES) build_support/Makefile-build-windows.mk
 
 ${WINDOWS_DEBUG_FILE_DIR}/main.o:	main.c
 	@echo "Compiling:  $< "
-	$(CC) $(DEBUG_FLAGS) $(INC_PATH_FLAG) -o $@ -c main.c
+	$(CC) -DWINDOWS $(DEBUG_FLAGS) $(INC_PATH_FLAG) -o $@ -c main.c
 
 ###################    Driver related recipies #################
 ${WINDOWS_DEBUG_FILE_DIR}/serial_drv_windows.o: driver/serial_drv_windows.c
 	@echo "Compiling:  $< "
-	$(CC) $(DEBUG_FLAGS) $(INC_PATH_FLAG) -o $@ -c $<
+	$(CC) -DWINDOWS $(DEBUG_FLAGS) $(INC_PATH_FLAG) -o $@ -c $<
 
 ${WINDOWS_DEBUG_FILE_DIR}/time_drv_windows.o: driver/time_drv_windows.c
 	@echo "Compiling:  $< "
-	$(CC) $(DEBUG_FLAGS) $(INC_PATH_FLAG) -o $@ -c $<
+	$(CC) -DWINDOWS $(DEBUG_FLAGS) $(INC_PATH_FLAG) -o $@ -c $<
 
 ${WINDOWS_DEBUG_FILE_DIR}/can_driver.o: driver/can_driver.c
 	@echo "Compiling:  $< "
-	$(CC) -D WINDOWS $(DEBUG_FLAGS) $(INC_PATH_FLAG) -o $@ -c $<
+	$(CC) -DWINDOWS $(DEBUG_FLAGS) $(INC_PATH_FLAG) -o $@ -c $<
 
 ###################    Utility related recipies #################
 ${WINDOWS_DEBUG_FILE_DIR}/utility_support.o: utility/utility_support.c
 	@echo "Compiling:  $< "
-	$(CC) $(DEBUG_FLAGS) $(INC_PATH_FLAG) -o $@ -c $<
+	$(CC) -DWINDOWS $(DEBUG_FLAGS) $(INC_PATH_FLAG) -o $@ -c $<
 
 
 ${WINDOWS_DEBUG_FILE_DIR}/file_handling_support.o: utility/file_handling_support.c

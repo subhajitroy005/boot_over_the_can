@@ -5,14 +5,14 @@ include build_support/Makefile-var.mk
 .build-impl:
 ifeq ($(OS),Linux)
 	@echo "Building for linux....!"
-	make -f build_support/Makefile-build-linux.mk
+	make $(EXTRA_MAKE_FLAGS) -f build_support/Makefile-build-linux.mk 
 endif
 
 ifeq ($(OS),Windows)
 	@echo Building for Windows....!
 # not able to clen dir files in windows so create here
 	md $(WINDOWS_DEBUG_FILE_DIR)
-	make -f build_support/Makefile-build-windows.mk
+	make $(EXTRA_MAKE_FLAGS) -f build_support/Makefile-build-windows.mk
 endif
 
 

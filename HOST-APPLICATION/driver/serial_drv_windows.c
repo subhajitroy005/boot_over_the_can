@@ -7,8 +7,8 @@ HANDLE          serial_io_reference;                            // Contains the 
 COMMTIMEOUTS    serial_io_time_out;                             // For timeout settings     
 COMMCONFIG      serial_io_dcbSerialParams;                      // Config serial port parameters	
 DWORD           dwBytesWritten, dwBytesRead , event_mask;       // unsigned long data types
-volatile char   serial_read_buff[MAX_INCOMMING_STRING_LENGTH] ,
-                serial_write_buff[MAX_OUTGOING_STRING_LENGTH]; // Serial read write buffer
+char            serial_read_buff[MAX_INCOMMING_STRING_LENGTH] ,
+                serial_write_buff[MAX_OUTGOING_STRING_LENGTH];  // Serial read write buffer
 
 
 
@@ -65,13 +65,7 @@ void config_serial_port(char* port_name)
         if(!SetCommMask(serial_io_reference, event_mask)){
                 printf("[SERIAL DRV INIT][ ERR ] Setting serial event mask!\n");
         }
-        //GetCommMask(serial_io_reference, &event_mask); // not require to check here
-
-        /* Flush the existing data in buffer 
-        int purge_mask = PURGE_RXCLEAR | PURGE_TXCLEAR;
-        if(PurgeComm(serial_io_reference,purge_mask));
-                printf("Serial Bufffered cleared\n");
-        */
+        
         printf("[SERIAL DRV INIT][ OK ] Serial connection\n");
 }
 
@@ -108,18 +102,14 @@ void write_serial_string(char* string_data)
 int read_serial_string(uint8_t * buffer)
 {       
         DWORD byte_read = 0;
-        int actual_data_index = 0;
         memset(serial_read_buff, 0 , MAX_INCOMMING_STRING_LENGTH);
-        /* Wait here for serial get any rx byte */
-        //WaitCommEvent(serial_io_reference, &event_mask, NULL);
-        //long unsigned int ret = ReadFile(serial_io_reference, temp_buffer, 1, &byte_read, NULL);
 
         uint8_t temp_buffer[2];
         int i = 0;
         while(1)
         {
                 
-                long unsigned int ret = ReadFile(serial_io_reference, temp_buffer, 1, &byte_read, NULL);
+                ReadFile(serial_io_reference, temp_buffer, 1, &byte_read, NULL);
                 
                 if(temp_buffer[0] == '\r')
                         break;
@@ -136,35 +126,4 @@ int read_serial_string(uint8_t * buffer)
         #endif
 
         return i;
-
-        // Here we are not checking the string as there are attached string so check in the can driver
-        //long unsigned int ret = ReadFile(serial_io_reference, serial_read_buff, 30, &byte_read, NULL);
-        /*
-        //printf("HELLO:  :%d:\n", byte_read);
-        #if INCOMMING_SERIAL_DRIVER_PRINT
-        printf("[SERIAL DRV RD] Read str  :%s: len->%d\n",serial_read_buff, strlen(serial_read_buff));
-        #endif
-	// Extract the actual data from start and terminatoin character 	
-        for(int i =0 ; i < byte_read ; i++  ){
-                
-                // Starting character 
-                if(serial_read_buff[i] == 't'){
-                        actual_data_index = 0; // reset the index as zero
-                                               // So that rest part will start from zero
-
-
-                // Termination character 
-                } else if(serial_read_buff[i] == '\n'){
-                        // Break the loop so that we don't need the other rest part after termination
-                        //break; not break for attached and long string
-
-
-                // Other character 
-                } else {
-                    buffer[actual_data_index++] = serial_read_buff[i];
-                }
-           }
-        
-        
-        */
 }
